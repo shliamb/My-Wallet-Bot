@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+
+  postgres:
+    image: postgres:16.1
+    container_name: app_postgres
+    environment:
+      POSTGRES_USER: ${USER_DB}
+      POSTGRES_PASSWORD: ${PASWOR_DB}
+      POSTGRES_DB: my_database
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # app:
+  #   build: .
+  #   container_name: bot
+  #   environment:
+  #     POSTGRES_HOST: postgres
+  #     POSTGRES_USER: ${USER_DB}
+  #     POSTGRES_PASSWORD: ${PASWOR_DB}
+  #     POSTGRES_DB: my_database
+  #   depends_on:
+  #     - postgres
+
+volumes:
+  postgres_data:

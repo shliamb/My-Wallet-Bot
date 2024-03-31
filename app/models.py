@@ -1,4 +1,14 @@
-from keys import user_db, paswor_db
+from dotenv import load_dotenv
+import os
+
+# Укажите путь к вашему файлу .env
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+# Загрузите переменные окружения
+load_dotenv(dotenv_path)
+# Получите переменные окружения
+user_db = os.environ.get('USER_DB')
+paswor_db = os.environ.get('PASWOR_DB')
+
 from sqlalchemy import ForeignKey
 import sqlalchemy
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -6,10 +16,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import relationship
 from typing import AsyncGenerator
+# from keys import user_db, paswor_db
+
 
 #from sqlalchemy.orm import AsyncSession
 
-DATABASE_URL = f"postgresql+asyncpg://{user_db}:{paswor_db}@postgres:5432/my_database"
+#DATABASE_URL = f"postgresql+asyncpg://{user_db}:{paswor_db}@postgres:5432/my_database"
+DATABASE_URL = f"postgresql+asyncpg://{user_db}:{paswor_db}@localhost:5432/my_database"
 engine = create_async_engine(DATABASE_URL) # Создание асинхронного движка для работы с базой данных
 Base = declarative_base() # Создание базового класса для объявления моделей
 Column = sqlalchemy.Column
@@ -41,6 +54,7 @@ class Sessions(Base):
     __tablename__ = 'sessions'
     id = Column(sqlalchemy.BigInteger, ForeignKey('user_id.id'), primary_key=True)
     date = Column(sqlalchemy.DateTime, nullable=True) 
+    # +-
     amount = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
     card_number = Column(sqlalchemy.Integer, primary_key=True)
     # name_card = Column(sqlalchemy.String(50), nullable=True)
