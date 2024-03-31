@@ -1,5 +1,4 @@
 from keys import user_db, paswor_db
-import datetime
 from sqlalchemy import ForeignKey
 import sqlalchemy
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -16,38 +15,46 @@ Base = declarative_base() # Создание базового класса дл�
 Column = sqlalchemy.Column
 
 
-# if has access to base in the future - None
-class UsersBase(Base):
-    __tablename__ = 'users_db'
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, index=True)
-    username = sqlalchemy.Column(sqlalchemy.String(50), nullable=False, unique=True)
-    password = Column(sqlalchemy.String(100), nullable=False)
-    email = Column(sqlalchemy.String(100), nullable=True, unique=True)
+class User(Base):
+    __tablename__ = 'user_id'
+    id = Column(sqlalchemy.BigInteger, primary_key=True, unique=True, nullable=False, index=True) # user id telgram or any data id
+    user_name = Column(sqlalchemy.String(50), nullable=True)
+    # is_admin = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False)
+    # is_block = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) 
+    currency = Column(sqlalchemy.String(10), default="RUB", server_default="RUB", nullable=False)
+    card_1 = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
+    name_card_1 = Column(sqlalchemy.String(50), nullable=True)
+    # card_2 = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
+    # name_card_2 = Column(sqlalchemy.String(50), nullable=True)
+    # card_3 = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
+    # name_card_3 = Column(sqlalchemy.String(50), nullable=True)
+    # card_4 = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
+    # name_card_4 = Column(sqlalchemy.String(50), nullable=True)
+    # card_5 = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
+    # name_card_5 = Column(sqlalchemy.String(50), nullable=True)
+    cash = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
+    ####
+    sessions = relationship("Sessions", back_populates="users_sessions", uselist=False)
+    task = relationship("Task", back_populates="users_task", uselist=False)
 
+class Sessions(Base):
+    __tablename__ = 'sessions'
+    id = Column(sqlalchemy.BigInteger, ForeignKey('user_id.id'), primary_key=True)
+    date = Column(sqlalchemy.DateTime, nullable=True) 
+    amount = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
+    card_number = Column(sqlalchemy.Integer, primary_key=True)
+    # name_card = Column(sqlalchemy.String(50), nullable=True)
+    is_cash = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) 
+    ####
+    users_sessions = relationship("User", back_populates="sessions")
 
-
-# Users Telegram - Main
-class UsersTelegram(Base):
-    __tablename__ = 'users_telegram'
-    id = Column(sqlalchemy.BigInteger, primary_key=True, unique=True, nullable=False, index=True)
-    name = Column(sqlalchemy.String(50), nullable=True)
-    full_name = Column(sqlalchemy.String(50), nullable=True)
-    first_name = Column(sqlalchemy.String(50), nullable=True)
-    last_name = Column(sqlalchemy.String(50), nullable=True)
-    chat_id = Column(sqlalchemy.BigInteger, nullable=True) # если не пользователь, а от лица группы то свой id, если  user то user_id
-    is_admin = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) # Админ ли
-    is_block = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) # За блокирован ли
-    is_good = Column(sqlalchemy.Integer, default=3, server_default="3", nullable=False) # Рейтинг, хз зачем, посмотрим, может скидки.. Без запрета null, default не выставиться
-    ###
-    settings = relationship("Settings", back_populates="userstelegram", uselist=False)
-    stat = relationship("Statistics")
-    discussion = relationship("Discussion", back_populates="userstelegram", uselist=False)
-
-
-
-
-
-
+class Task(Base):
+    __tablename__ = 'task'
+    id = Column(sqlalchemy.BigInteger, ForeignKey('user_id.id'), primary_key=True)
+    date = Column(sqlalchemy.DateTime, nullable=True)
+    task = Column(sqlalchemy.String(50), nullable=True)
+    ####
+    users_task = relationship("User", back_populates="task")
 
 
 
