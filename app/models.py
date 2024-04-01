@@ -37,12 +37,8 @@ class User(Base):
     lang = Column(sqlalchemy.String(50), default="RUS", server_default="RUS", nullable=False)
     show_balance = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) # show the balance when changing
     cash = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
-    card_1 = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
-    name_card_1 = Column(sqlalchemy.String(50), nullable=True)
-    card_2 = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
-    name_card_2 = Column(sqlalchemy.String(50), nullable=True)
-    card_3 = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
-    name_card_3 = Column(sqlalchemy.String(50), nullable=True)
+    crypto = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
+    cards = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
     is_admin = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False)
     is_block = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False)
     did_you_donate = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False) # !)
@@ -58,8 +54,8 @@ class Sessions(Base):
     flow = Column(sqlalchemy.String(5), default="-", server_default="-", nullable=False) # expense/income
     amount = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
     is_cash = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) 
-    card_number = Column(sqlalchemy.Integer, primary_key=True)
-    name_card = Column(sqlalchemy.String(50), nullable=True)
+    is_cards = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) 
+    is_crypto = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) 
     ####
     users_sessions = relationship("User", back_populates="sessions")
 
