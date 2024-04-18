@@ -1,7 +1,3 @@
-
-
-
-
-#USER_DB=""
-
-#PASWOR_DB=""
+# USER_DB="name"
+# PASWOR_DB="pass"
+# TELE_BOT="token"

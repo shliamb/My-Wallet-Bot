@@ -1,23 +1,16 @@
-from dotenv import load_dotenv
-import os
 
-# Укажите путь к вашему файлу .env
-dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-# Загрузите переменные окружения
-load_dotenv(dotenv_path)
-# Получите переменные окружения
-user_db = os.environ.get('USER_DB')
-paswor_db = os.environ.get('PASWOR_DB')
-
-from sqlalchemy import ForeignKey
-import sqlalchemy
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import relationship
+from sqlalchemy import ForeignKey
+import sqlalchemy
 from typing import AsyncGenerator
-# from keys import user_db, paswor_db
+import os
 
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+user_db, paswor_db = os.environ.get('USER_DB'),  os.environ.get('PASWOR_DB')
 
 #from sqlalchemy.orm import AsyncSession
 
@@ -29,19 +22,25 @@ Column = sqlalchemy.Column
 ####
 
 
+
 class User(Base):
     __tablename__ = 'user_id'
     id = Column(sqlalchemy.BigInteger, primary_key=True, unique=True, nullable=False, index=True) # user id telgram or any data id
-    user_name = Column(sqlalchemy.String(50), nullable=True)
-    currency = Column(sqlalchemy.String(10), default="RUB", server_default="RUB", nullable=False)
-    lang = Column(sqlalchemy.String(50), default="RUS", server_default="RUS", nullable=False)
+    name = Column(sqlalchemy.String(1000), nullable=True)
+    full_name = Column(sqlalchemy.String(1000), nullable=True)
+    first_name = Column(sqlalchemy.String(1000), nullable=True)
+    last_name = Column(sqlalchemy.String(1000), nullable=True)
+    currency = Column(sqlalchemy.String(100), default="RUB", server_default="RUB", nullable=False)
+    lang = Column(sqlalchemy.String(100), default="RUS", server_default="RUS", nullable=False)
     show_balance = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) # show the balance when changing
     cash = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
     crypto = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
+    crypto_currency = Column(sqlalchemy.String(10), default="USDT", server_default="USDT", nullable=False)
     cards = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
     is_admin = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False)
     is_block = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False)
     did_you_donate = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False) # !)
+    date = Column(sqlalchemy.DateTime, nullable=True)
     ####
     sessions = relationship("Sessions", back_populates="users_sessions", uselist=False)
     task = relationship("Task", back_populates="users_task", uselist=False)
@@ -49,13 +48,13 @@ class User(Base):
 class Sessions(Base):
     __tablename__ = 'sessions'
     id = Column(sqlalchemy.BigInteger, ForeignKey('user_id.id'), primary_key=True)
-    date = Column(sqlalchemy.DateTime, nullable=True)
-    category = Column(sqlalchemy.String(50), default="is no category", server_default="is no category", nullable=False)
-    flow = Column(sqlalchemy.String(5), default="-", server_default="-", nullable=False) # expense/income
+    category = Column(sqlalchemy.String(1000), default="is no category", server_default="is no category", nullable=False)
+    flow = Column(sqlalchemy.String(50), default="-", server_default="-", nullable=False) # expense/income
     amount = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
     is_cash = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) 
     is_cards = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) 
     is_crypto = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) 
+    date = Column(sqlalchemy.DateTime, nullable=True)
     ####
     users_sessions = relationship("User", back_populates="sessions")
 
@@ -64,13 +63,29 @@ class Task(Base):
     id = Column(sqlalchemy.BigInteger, ForeignKey('user_id.id'), primary_key=True)
     date = Column(sqlalchemy.DateTime, nullable=True)
     date_changes = Column(sqlalchemy.DateTime, nullable=True)
-    task = Column(sqlalchemy.String(50), nullable=True)
+    task = Column(sqlalchemy.String(1000), nullable=True)
     is_complite = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) 
     ####
     users_task = relationship("User", back_populates="task")
-
 ####
 
+class Exchange(Base):
+    __tablename__ = 'exchange'
+    id = Column(sqlalchemy.Integer, primary_key=True)
+    date = Column(sqlalchemy.DateTime, nullable=True)
+    rate = Column(sqlalchemy.Float(), default=100.0, server_default="100.0", nullable=False)
+    currency = Column(sqlalchemy.String(10), default="USDT", server_default="USDT", nullable=False)
+    ###
+
+class Backup(Base):
+    __tablename__ = 'backup'
+    id = Column(sqlalchemy.Integer, primary_key=True)
+    date = Column(sqlalchemy.DateTime, nullable=True)
+    date_changes = Column(sqlalchemy.DateTime, nullable=True)
+    task = Column(sqlalchemy.String(1000), nullable=True)
+    is_complite = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) 
+    ####
+####
 
 
 

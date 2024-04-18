@@ -3,7 +3,7 @@ version: '3.8'
 services:
 
   postgres:
-    image: postgres:16.1
+    image: postgres:latest
     container_name: app_postgres
     environment:
       POSTGRES_USER: ${USER_DB}
@@ -13,6 +13,14 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - db-network
 
 volumes:
   postgres_data:
+
+networks:
+  db-network:
+    driver: bridge
+
+
