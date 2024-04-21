@@ -2,7 +2,7 @@ import logging
 # При деплое раскоментить
 # logging.getLogger('aiogram').propagate = False # Блокировка логирование aiogram до его импорта
 # logging.basicConfig(level=logging.INFO, filename='log/app.log', filemode='a', format='%(levelname)s - %(asctime)s - %(name)s - %(message)s',) # При деплое активировать логирование в файл
-
+from worker_db import get_user_by_id, adding_user
 from keys import telegram
 import sys
 import os
@@ -53,10 +53,27 @@ async def typing(action) -> None:
 async def command_start_handler(message: types.Message) -> None:
     await typing(message)
     await message.answer(f"Привет, {html.bold(message.from_user.full_name)}! Этот бот собирает ваши раходы и доходы, для того что бы разложить все в общую статистику. Анализ и статистика поможет вам оценить и контроллировать расходы.")
+        # Preparing user data
     id = user_id(message)
     name = message.from_user.username
     full_name = message.from_user.full_name
     first_name = message.from_user.first_name
+    last_name = message.from_user.last_name
+        # Save user data
+    get_user = await get_user_by_id(id)
+    if get_user is None:
+        push_data_user = {
+            "id": id,
+            "name": name,
+            "full_name": full_name,
+            "first_name": first_name,
+            "last_name": last_name
+        }
+        await adding_user(push_data_user)
+    else:
+        print()
+        logging.info(f"The user id:{id} is already in the database.")
+
 
     # MENU
     bot_commands = [
@@ -107,8 +124,19 @@ async def process_add_cash(callback_query: types.CallbackQuery, state: FSMContex
 
 @dp.message(Form.add_cash, F.content_type.in_({'text'}))
 async def invoice_add_cash(message: Message, state: FSMContext):
+    id = user_id(message)
     # user_uuid = uuid.uuid4()
     print(message.text)
+
+    push_data_user = {
+        "id": id,
+        "name": name,
+        "full_name": full_name,
+        "first_name": first_name,
+        "last_name": last_name
+    }
+
+
     await state.clear()
 
 # ADD MONEY --- card
