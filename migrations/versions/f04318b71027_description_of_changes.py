@@ -1,8 +1,8 @@
-"""Initial migration
+"""Description of changes
 
-Revision ID: 120714dddf67
+Revision ID: f04318b71027
 Revises: 
-Create Date: 2024-04-18 18:29:13.682250
+Create Date: 2024-04-21 16:17:28.744174
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '120714dddf67'
+revision: str = 'f04318b71027'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -45,9 +45,10 @@ def upgrade() -> None:
     sa.Column('lang', sa.String(length=100), server_default='RUS', nullable=False),
     sa.Column('show_balance', sa.Boolean(), server_default='False', nullable=False),
     sa.Column('cash', sa.Float(), server_default='0', nullable=False),
+    sa.Column('cards', sa.Float(), server_default='0', nullable=False),
+    sa.Column('money_currency', sa.String(length=10), server_default='RUB', nullable=False),
     sa.Column('crypto', sa.Float(), server_default='0', nullable=False),
     sa.Column('crypto_currency', sa.String(length=10), server_default='USDT', nullable=False),
-    sa.Column('cards', sa.Float(), server_default='0', nullable=False),
     sa.Column('is_admin', sa.Boolean(), server_default='False', nullable=False),
     sa.Column('is_block', sa.Boolean(), server_default='False', nullable=False),
     sa.Column('did_you_donate', sa.Float(), server_default='0', nullable=False),
@@ -56,7 +57,7 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_user_id_id'), 'user_id', ['id'], unique=True)
     op.create_table('sessions',
-    sa.Column('id', sa.BigInteger(), nullable=False),
+    sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('category', sa.String(length=1000), server_default='is no category', nullable=False),
     sa.Column('flow', sa.String(length=50), server_default='-', nullable=False),
     sa.Column('amount', sa.Float(), server_default='0', nullable=False),
@@ -64,7 +65,8 @@ def upgrade() -> None:
     sa.Column('is_cards', sa.Boolean(), server_default='False', nullable=False),
     sa.Column('is_crypto', sa.Boolean(), server_default='False', nullable=False),
     sa.Column('date', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['id'], ['user_id.id'], ),
+    sa.Column('users_id', sa.BigInteger(), nullable=True),
+    sa.ForeignKeyConstraint(['users_id'], ['user_id.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('task',

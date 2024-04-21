@@ -2,7 +2,9 @@ import logging
 # При деплое раскоментить
 # logging.getLogger('aiogram').propagate = False # Блокировка логирование aiogram до его импорта
 # logging.basicConfig(level=logging.INFO, filename='log/app.log', filemode='a', format='%(levelname)s - %(asctime)s - %(name)s - %(message)s',) # При деплое активировать логирование в файл
-from worker_db import get_user_by_id, adding_user
+from worker_db import get_user_by_id, adding_user, adding_session, update_user
+from functions import is_int_or_float, day_utcnow
+from category import get_category
 from keys import telegram
 import sys
 import os
@@ -22,8 +24,7 @@ from aiogram.client.default import DefaultBotProperties
 # from WalletPay import AsyncWalletPayAPI
 # from WalletPay import WalletPayAPI, WebhookManager
 # from WalletPay.types import Event
-from datetime import datetime, timezone, timedelta
-import uuid
+# import uuid
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 
@@ -52,13 +53,24 @@ async def typing(action) -> None:
 @dp.message(CommandStart())
 async def command_start_handler(message: types.Message) -> None:
     await typing(message)
-    await message.answer(f"Привет, {html.bold(message.from_user.full_name)}! Этот бот собирает ваши раходы и доходы, для того что бы разложить все в общую статистику. Анализ и статистика поможет вам оценить и контроллировать расходы.")
+
+    await message.answer(f"RU\nПривет, {html.bold(message.from_user.full_name)}!\n\n\
+    👛 Это бот, который помогает вести статистику доходов и расходов из разных источников. Позволяет\
+    дотошно анализировать категории расходов и доходов, предоставляя удобный отчет.\n\
+    Для какой то части людей - это очень полезно, например для меня.\n\n\
+    🗑 При желании, вы можете удалить все данные о транзакциях в базе, нажатием одной кнопки. Подробнее - позже.\n\n\n\
+EN\nHi, {html.bold(message.from_user.full_name)}!\n\n\
+    👛 This is a bot that helps to keep statistics on income and expenses from various sources. Allows\
+    meticulously analyze the categories of expenses and income, providing a convenient report.\n\
+    For some part of people, it is very useful, for example, for me.\n\n\
+    🗑 If desired, you can delete all transaction data in the database by pressing one button. More details later.")
         # Preparing user data
     id = user_id(message)
     name = message.from_user.username
     full_name = message.from_user.full_name
     first_name = message.from_user.first_name
     last_name = message.from_user.last_name
+    date = await day_utcnow()
         # Save user data
     get_user = await get_user_by_id(id)
     if get_user is None:
@@ -67,7 +79,8 @@ async def command_start_handler(message: types.Message) -> None:
             "name": name,
             "full_name": full_name,
             "first_name": first_name,
-            "last_name": last_name
+            "last_name": last_name,
+            "date": date
         }
         await adding_user(push_data_user)
     else:
@@ -78,8 +91,8 @@ async def command_start_handler(message: types.Message) -> None:
     # MENU
     bot_commands = [
         BotCommand(command="/add", description="📈 Приход"),
-        BotCommand(command="/dell", description="📉 Расход"),
-        BotCommand(command="/bal", description="💵 Баланс"), 
+        BotCommand(command="/del", description="📉 Расход"),
+        BotCommand(command="/rev", description="💸 Перемещение"), 
         BotCommand(command="/stat", description="📊 Статистика"),
         BotCommand(command="/set", description="⚙️ Настройки"),
     ]
@@ -87,142 +100,545 @@ async def command_start_handler(message: types.Message) -> None:
     return
 
 
-# Сделать что бы при открытии кнопок уже выдавало в названии кнопки сумму 
+
+
+
+
+
+
+
 
 # SUB-MENU
 
 class Form(StatesGroup):
-    # Add
+        # Add
     add_cash = State() 
+    add_cash_text = State() 
     add_cards = State()
+    add_cards_text = State()
     add_crypto = State()
-    # Dell
-    dell_cash = State()
-    dell_cards = State()
-    dell_crypto = State()
+    add_crypto_text = State()
+        # Dell
+    del_cash = State()
+    del_cash_text = State()
+    del_cards = State()
+    del_cards_text = State()
+    del_crypto = State()
+    del_crypto_text = State()
+
+
+
+
+
 
 
 ######## ADD MONEY ########
 @dp.message(Command("add"))
 async def menu_add(message: types.Message):
-    #id = user_id(message)
+        # Data preparation
+    id = user_id(message)
+    n = await get_user_by_id(id)
+    if n:
+        cash = n.cash
+        crypto = n.crypto
+        money_currency = n.money_currency
+        crypto_currency = n.crypto_currency
+        cards = n.cards
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="💵 Наличность", callback_data="add_cash")],
-            [InlineKeyboardButton(text="💳 Банковские карты", callback_data="add_cards")],
-            [InlineKeyboardButton(text="💸 Крипта", callback_data="add_crypto")],
+            [InlineKeyboardButton(text=f"💵 Наличность ({cash} {money_currency})", callback_data="add_cash")],
+            [InlineKeyboardButton(text=f"💳 Банковские карты ({cards} {money_currency})", callback_data="add_cards")],
+            [InlineKeyboardButton(text=f"🎫 Крипта ({crypto} {crypto_currency}) ", callback_data="add_crypto")], # 🪪🧾📰
         ]
     )
     await message.answer("📈 Выберите место куда добавляете деньги", reply_markup=keyboard)
 
-# ADD MONEY --- cash
+
+
+
+
+
+
+# ADD MONEY CASH --- 1
 @dp.callback_query(lambda c: c.data == 'add_cash')
 async def process_add_cash(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.send_message(callback_query.from_user.id, "Введите сумму пополнения наличности:")
     await bot.answer_callback_query(callback_query.id)
     await state.set_state(Form.add_cash)
 
+# ADD MONEY CASH --- 2
 @dp.message(Form.add_cash, F.content_type.in_({'text'}))
 async def invoice_add_cash(message: Message, state: FSMContext):
+    await message.answer("Введите комментарий к пополнению:")
+        # Data preparation
+    amount = await is_int_or_float(message.text)
+        # Сохраняем  данные в state
+    await state.update_data(amount=amount)
+    await state.set_state(Form.add_cash_text)
+
+# ADD MONEY CASH --- 3
+@dp.message(Form.add_cash_text, F.content_type.in_({'text'}))
+async def invoice_add_cash_text(message: Message, state: FSMContext):
     id = user_id(message)
-    # user_uuid = uuid.uuid4()
-    print(message.text)
+    text = message.text
+    category = await get_category(text)
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
 
+    flow = "+"
+    is_cash = True
+    date = await day_utcnow()
+
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+
+        # Saving a shared account User
+    data_user = await get_user_by_id(id)
+    if data_user is None:
+        await message.answer("Ошибка: Пользователь не найден, начните с /start")
+        return
+    all_cash = data_user.cash + amount
+    money_currency = data_user.money_currency
     push_data_user = {
-        "id": id,
-        "name": name,
-        "full_name": full_name,
-        "first_name": first_name,
-        "last_name": last_name
+        "cash": all_cash,
     }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is True:
+        await message.answer(f"Добавлено {amount} {money_currency}. в наличность, присвоена категория - '{category}'")
+    else:
+        await message.answer("Ошибка в сохранения данных в базу.")
 
+        # Save Session
+    push_data_session = {
+        "category": category,
+        "flow": flow,
+        "is_cash": is_cash,
+        "amount": amount,
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
 
     await state.clear()
 
-# ADD MONEY --- card
+
+
+
+
+
+
+
+
+
+
+# ADD MONEY CARD --- 1
 @dp.callback_query(lambda c: c.data == 'add_cards')
 async def process_add_cards(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.send_message(callback_query.from_user.id, "Введите сумму пополнения банковской карты:")
     await bot.answer_callback_query(callback_query.id)
     await state.set_state(Form.add_cards)
 
+# ADD MONEY CARD --- 2
 @dp.message(Form.add_cards, F.content_type.in_({'text'}))
 async def invoice_add_cards(message: Message, state: FSMContext):
-    print(message.text)
+    await message.answer("Введите комментарий к пополнению:")
+        # Data preparation
+    amount = await is_int_or_float(message.text)
+        # Сохраняем  данные в state
+    await state.update_data(amount=amount)
+    await state.set_state(Form.add_cards_text)
+
+# ADD MONEY CARD --- 3
+@dp.message(Form.add_cards_text, F.content_type.in_({'text'}))
+async def invoice_add_cards_text(message: Message, state: FSMContext):
+    id = user_id(message)
+    text = message.text
+    category = await get_category(text)
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
+
+    flow = "+"
+    is_cards = True
+    date = await day_utcnow()
+
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+
+        # Saving a shared account User
+    data_user = await get_user_by_id(id)
+    if data_user is None:
+        await message.answer("Ошибка: Пользователь не найден, начните с /start")
+        return
+    all_cards = data_user.cards + amount
+    money_currency = data_user.money_currency
+    push_data_user = {
+        "cards": all_cards,
+    }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is True:
+        await message.answer(f"Добавлено {amount} {money_currency} на карты, присвоена категория - '{category}'")
+    else:
+        await message.answer("Ошибка в сохранения данных в базу.")
+
+        # Save Session
+    push_data_session = {
+        "category": category,
+        "flow": flow,
+        "is_cards": is_cards,
+        "amount": amount,
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+
     await state.clear()
 
-# ADD MONEY --- add_crypto
+
+
+
+
+
+
+
+
+
+
+# ADD MONEY CRYPTO --- 1
 @dp.callback_query(lambda c: c.data == 'add_crypto')
 async def process_add_crypto(callback_query: types.CallbackQuery, state: FSMContext):
-    await bot.send_message(callback_query.from_user.id, "Введите сумму пополнения криптокошелька в USDT:") # {USDT}
+    await bot.send_message(callback_query.from_user.id, "Введите сумму пополнения крипты:")
     await bot.answer_callback_query(callback_query.id)
-    await state.set_state(Form.add_cards)
+    await state.set_state(Form.add_crypto)
 
+# ADD MONEY CRYPTO --- 2
 @dp.message(Form.add_crypto, F.content_type.in_({'text'}))
 async def invoice_add_crypto(message: Message, state: FSMContext):
-    print(message.text)
+    await message.answer("Введите комментарий к пополнению:")
+        # Data preparation
+    amount = await is_int_or_float(message.text)
+        # Сохраняем  данные в state
+    await state.update_data(amount=amount)
+    await state.set_state(Form.add_crypto_text)
+
+# ADD MONEY CRYPTO --- 3
+@dp.message(Form.add_crypto_text, F.content_type.in_({'text'}))
+async def invoice_add_crypto_text(message: Message, state: FSMContext):
+    id = user_id(message)
+    text = message.text
+    category = await get_category(text)
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
+
+    flow = "+"
+    is_crypto = True
+    date = await day_utcnow()
+
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+
+        # Saving a shared account User
+    data_user = await get_user_by_id(id)
+    if data_user is None:
+        await message.answer("Ошибка: Пользователь не найден, начните с /start")
+        return
+    all_crypto = data_user.crypto + amount
+    crypto_currency = data_user.crypto_currency
+    push_data_user = {
+        "crypto": all_crypto,
+    }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is True:
+        await message.answer(f"Добавлено {amount} {crypto_currency} в крипту, присвоена категория - '{category}'")
+    else:
+        await message.answer("Ошибка в сохранения данных в базу.")
+
+        # Save Session
+    push_data_session = {
+        "category": category,
+        "flow": flow,
+        "is_crypto": is_crypto,
+        "amount": amount,
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+
     await state.clear()
 
 
-######## DELL MONEY ########
-@dp.message(Command("dell"))
-async def menu_dell(message: types.Message):
-    #id = user_id(message)
+
+
+
+
+
+
+######## DEL MONEY ########
+
+@dp.message(Command("del"))
+async def menu_del(message: types.Message):
+        # Data preparation
+    id = user_id(message)
+    n = await get_user_by_id(id)
+    if n:
+        cash = n.cash
+        crypto = n.crypto
+        money_currency = n.money_currency
+        crypto_currency = n.crypto_currency
+        cards = n.cards
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="💵 Наличность", callback_data="dell_cash")],
-            [InlineKeyboardButton(text="💳 Банковские карты", callback_data="dell_cards")],
-            [InlineKeyboardButton(text="💸 Крипта", callback_data="dell_crypto")],
+            [InlineKeyboardButton(text=f"💵 Наличность ({cash} {money_currency})", callback_data="del_cash")],
+            [InlineKeyboardButton(text=f"💳 Банковские карты ({cards} {money_currency})", callback_data="del_cards")],
+            [InlineKeyboardButton(text=f"🎫 Крипта ({crypto} {crypto_currency}) ", callback_data="del_crypto")], # 🪪🧾📰
         ]
     )
-    await message.answer("📉 Выберите место откуда убыло", reply_markup=keyboard)
+    await message.answer("📉 Выберите место расхода", reply_markup=keyboard)
 
-# DELL MONEY --- cash
-@dp.callback_query(lambda c: c.data == 'dell_cash')
-async def process_dell_cash(callback_query: types.CallbackQuery, state: FSMContext):
-    await bot.send_message(callback_query.from_user.id, "Введите потраченую сумму наличности:")
+
+
+
+
+
+
+
+
+# DEL MONEY CASH --- 1
+@dp.callback_query(lambda c: c.data == 'del_cash')
+async def process_del_cash(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.send_message(callback_query.from_user.id, "Введите сумму расхода наличности:")
     await bot.answer_callback_query(callback_query.id)
-    await state.set_state(Form.dell_cash)
+    await state.set_state(Form.del_cash)
 
-@dp.message(Form.dell_cash, F.content_type.in_({'text'}))
-async def invoice_dell_cash(message: Message, state: FSMContext):
-    print(message.text)
+# DEL MONEY CASH --- 2
+@dp.message(Form.del_cash, F.content_type.in_({'text'}))
+async def invoice_del_cash(message: Message, state: FSMContext):
+    await message.answer("Введите комментарий к расходу:")
+        # Data preparation
+    amount = await is_int_or_float(message.text)
+        # Сохраняем  данные в state
+    await state.update_data(amount=amount)
+    await state.set_state(Form.del_cash_text)
+
+# DEL MONEY CASH --- 3
+@dp.message(Form.del_cash_text, F.content_type.in_({'text'}))
+async def invoice_del_cash_text(message: Message, state: FSMContext):
+    id = user_id(message)
+    text = message.text
+    category = await get_category(text)
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
+
+    flow = "-"
+    is_cash = True
+    date = await day_utcnow()
+
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+
+        # Saving a shared account User
+    data_user = await get_user_by_id(id)
+    if data_user is None:
+        await message.answer("Ошибка: Пользователь не найден, начните с /start")
+        return
+    all_cash = data_user.cash - amount
+    money_currency = data_user.money_currency
+    push_data_user = {
+        "cash": all_cash,
+    }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is True:
+        await message.answer(f"Потрачено {amount} {money_currency}. из наличности, присвоена категория расхода - '{category}'")
+    else:
+        await message.answer("Ошибка в сохранения данных в базу.")
+
+        # Save Session
+    push_data_session = {
+        "category": category,
+        "flow": flow,
+        "is_cash": is_cash,
+        "amount": amount,
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+
     await state.clear()
 
-# DELL MONEY --- cards
-@dp.callback_query(lambda c: c.data == 'dell_cards')
-async def process_dell_cards(callback_query: types.CallbackQuery, state: FSMContext):
-    await bot.send_message(callback_query.from_user.id, "Введите потраченую сумму с карты:")
-    await bot.answer_callback_query(callback_query.id)
-    await state.set_state(Form.dell_cards)
 
-@dp.message(Form.dell_cards, F.content_type.in_({'text'}))
-async def invoice_dell_cards(message: Message, state: FSMContext):
-    print(message.text)
+
+
+
+
+
+
+
+# DEL MONEY CARD --- 1
+@dp.callback_query(lambda c: c.data == 'del_cards')
+async def process_del_cards(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.send_message(callback_query.from_user.id, "Введите сумму расхода с банковской карты:")
+    await bot.answer_callback_query(callback_query.id)
+    await state.set_state(Form.del_cards)
+
+# DEL MONEY CARD --- 2
+@dp.message(Form.del_cards, F.content_type.in_({'text'}))
+async def invoice_del_cards(message: Message, state: FSMContext):
+    await message.answer("Введите комментарий к расходу:")
+        # Data preparation
+    amount = await is_int_or_float(message.text)
+        # Сохраняем  данные в state
+    await state.update_data(amount=amount)
+    await state.set_state(Form.del_cards_text)
+
+# DEL MONEY CARD --- 3
+@dp.message(Form.del_cards_text, F.content_type.in_({'text'}))
+async def invoice_add_cards_text(message: Message, state: FSMContext):
+    id = user_id(message)
+    text = message.text
+    category = await get_category(text)
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
+
+    flow = "-"
+    is_cards = True
+    date = await day_utcnow()
+
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+
+        # Saving a shared account User
+    data_user = await get_user_by_id(id)
+    if data_user is None:
+        await message.answer("Ошибка: Пользователь не найден, начните с /start")
+        return
+    all_cards = data_user.cards - amount
+    money_currency = data_user.money_currency
+    push_data_user = {
+        "cards": all_cards,
+    }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is True:
+        await message.answer(f"Потрачено {amount} {money_currency} с карты, присвоена категория - '{category}'")
+    else:
+        await message.answer("Ошибка в сохранения данных в базу.")
+
+        # Save Session
+    push_data_session = {
+        "category": category,
+        "flow": flow,
+        "is_cards": is_cards,
+        "amount": amount,
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+
     await state.clear()
 
-# DELL MONEY --- crypto
-@dp.callback_query(lambda c: c.data == 'dell_crypto')
-async def process_dell_crypto(callback_query: types.CallbackQuery, state: FSMContext):
-    await bot.send_message(callback_query.from_user.id, "Введите потраченую сумму в криптовалюте:")
-    await bot.answer_callback_query(callback_query.id)
-    await state.set_state(Form.dell_crypto)
 
-@dp.message(Form.dell_crypto, F.content_type.in_({'text'}))
-async def invoice_dell_crypto(message: Message, state: FSMContext):
-    print(message.text)
+
+
+
+
+
+
+
+
+
+# DEL MONEY CRYPTO --- 1
+@dp.callback_query(lambda c: c.data == 'del_crypto')
+async def process_del_crypto(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.send_message(callback_query.from_user.id, "Введите сумму снятия с крипты:")
+    await bot.answer_callback_query(callback_query.id)
+    await state.set_state(Form.del_crypto)
+
+# DEL MONEY CRYPTO --- 2
+@dp.message(Form.del_crypto, F.content_type.in_({'text'}))
+async def invoice_del_crypto(message: Message, state: FSMContext):
+    await message.answer("Введите комментарий к снятию:")
+        # Data preparation
+    amount = await is_int_or_float(message.text)
+        # Сохраняем  данные в state
+    await state.update_data(amount=amount)
+    await state.set_state(Form.del_crypto_text)
+
+# DEL MONEY CRYPTO --- 3
+@dp.message(Form.del_crypto_text, F.content_type.in_({'text'}))
+async def invoice_del_crypto_text(message: Message, state: FSMContext):
+    id = user_id(message)
+    text = message.text
+    category = await get_category(text)
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
+
+    flow = "-"
+    is_crypto = True
+    date = await day_utcnow()
+
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+
+        # Saving a shared account User
+    data_user = await get_user_by_id(id)
+    if data_user is None:
+        await message.answer("Ошибка: Пользователь не найден, начните с /start")
+        return
+    all_crypto = data_user.crypto - amount
+    crypto_currency = data_user.crypto_currency
+    push_data_user = {
+        "crypto": all_crypto,
+    }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is True:
+        await message.answer(f"Снято {amount} {crypto_currency} с крипты, присвоена категория - '{category}'")
+    else:
+        await message.answer("Ошибка в сохранения данных в базу.")
+
+        # Save Session
+    push_data_session = {
+        "category": category,
+        "flow": flow,
+        "is_crypto": is_crypto,
+        "amount": amount,
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+
     await state.clear()
 
 
 
 
-######## BALANS ########
-@dp.message(Command("bal"))
-async def menu_bal(message: types.Message):
-    #id = user_id(message)
-    await message.answer("Баланс")
-    # await bot.answer_callback_query(message.id)
-    # await message.answer("📈 Выберите место куда добавляете деньги", reply_markup=keyboard)
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -31,32 +31,30 @@ async def get_user_by_id(id: int):
 # Update User Data
 async def update_user(id: int, updated_data) -> bool: 
     async_session = await create_async_engine_and_session()
-    confirmation = False
     async with async_session() as session:
         try:
             query = update(User).where(User.id == id).values(**updated_data)
             await session.execute(query)
             await session.commit()
-            confirmation = True
             logging.info(f"User data is update")
+            return True
         except Exception as e:
             logging.error(f"Failed to update user data, error: {e}")
-    return confirmation
+            return False
 
 # Add User Data to DB
 async def adding_user(user_data) -> bool:
     async_session = await create_async_engine_and_session()
-    confirmation = False
     async with async_session() as session:
         try:
             query = insert(User).values(**user_data)
             await session.execute(query)
             await session.commit()
-            confirmation = True
             logging.info("User data is add")
+            return True
         except Exception as e:
             logging.error(f"Failed to add user data, error: {e}")
-    return confirmation
+            return False
 
 
 #### USERS SESSION #### 
@@ -87,18 +85,35 @@ async def get_session_by_id(id: int):
 # Add User Session to DB
 async def adding_session(session_data) -> bool:
     async_session = await create_async_engine_and_session()
-    confirmation = False
     async with async_session() as session:
         try:
             query = insert(Sessions).values(**session_data)
             await session.execute(query)
             await session.commit()
-            confirmation = True
             logging.info("Session is add")
+            return True
         except Exception as e:
             logging.error(f"Failed to add session, error: {e}")
-    return confirmation
+            return False
 
+# Get all sessions
+async def get_all_session():
+    async_session = await create_async_engine_and_session()
+    async with async_session() as session:
+        query = select(Sessions)
+        result = await session.execute(query)
+        data = result.scalars().all()
+        return data or None
+
+
+# Get all sessions at ID
+async def get_all_session_at_id(id):
+    async_session = await create_async_engine_and_session()
+    async with async_session() as session:
+        query = select(Sessions).filter(Sessions.users_id == id)
+        result = await session.execute(query)
+        data = result.scalars().all()
+        return data or None
 # All sessions of one user per month/period
 
 # Maybe any think else
@@ -122,29 +137,27 @@ async def get_task_by_id(id: int):
 # Update Task
 async def update_task(id: int, updated_task_data) -> bool: 
     async_session = await create_async_engine_and_session()
-    confirmation = False
     async with async_session() as session:
         try:
             query = update(Task).where(Task.id == id).values(**updated_task_data)
             await session.execute(query)
             await session.commit()
-            confirmation = True
             logging.info(f"Task is update by user: {id}")
+            return True
         except Exception as e:
             logging.error(f"Failed to update task, error: {e}")
-    return confirmation
+            return False
 
 # Add Task
 async def adding_task(task_data) -> bool:
     async_session = await create_async_engine_and_session()
-    confirmation = False
     async with async_session() as session:
         try:
             query = insert(Task).values(**task_data)
             await session.execute(query)
             await session.commit()
-            confirmation = True
             logging.info("Adding one task to DB")
+            return True
         except Exception as e:
             logging.error(f"Failed to add task, errror:: {e}")
-    return confirmation
+            return False
