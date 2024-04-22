@@ -4,6 +4,7 @@ import logging
 # logging.basicConfig(level=logging.INFO, filename='log/app.log', filemode='a', format='%(levelname)s - %(asctime)s - %(name)s - %(message)s',) # При деплое активировать логирование в файл
 from worker_db import get_user_by_id, adding_user, adding_session, update_user
 from functions import is_int_or_float, day_utcnow
+from exchange import get_exchange
 from category import get_category
 from keys import telegram
 import sys
@@ -35,7 +36,7 @@ dp = Dispatcher() # All handlers should be attached to the Router (or Dispatcher
 bot = Bot(token=telegram, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 # router = Router()
 # router.message.middleware(ChatActionMiddleware())
-
+                                                                                                
 
 # Get User_ID
 def user_id(action) -> int:
@@ -92,7 +93,7 @@ EN\nHi, {html.bold(message.from_user.full_name)}!\n\n\
     bot_commands = [
         BotCommand(command="/add", description="📈 Приход"),
         BotCommand(command="/del", description="📉 Расход"),
-        BotCommand(command="/rev", description="💸 Перемещение"), 
+        BotCommand(command="/mov", description="💸 Перемещение"), 
         BotCommand(command="/stat", description="📊 Статистика"),
         BotCommand(command="/set", description="⚙️ Настройки"),
     ]
@@ -125,8 +126,13 @@ class Form(StatesGroup):
     del_cards_text = State()
     del_crypto = State()
     del_crypto_text = State()
-
-
+        # Move 
+    mov_cash = State()
+    mov_cash_choice = State()
+    mov_card = State()
+    mov_card_choice = State()
+    mov_crypto = State()
+    mov_crypto_choice = State()
 
 
 
@@ -147,9 +153,9 @@ async def menu_add(message: types.Message):
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=f"💵 Наличность ({cash} {money_currency})", callback_data="add_cash")],
-            [InlineKeyboardButton(text=f"💳 Банковские карты ({cards} {money_currency})", callback_data="add_cards")],
-            [InlineKeyboardButton(text=f"🎫 Крипта ({crypto} {crypto_currency}) ", callback_data="add_crypto")], # 🪪🧾📰
+            [InlineKeyboardButton(text=f"💵 Наличность ({round(cash, 3)} {money_currency})", callback_data="add_cash")],
+            [InlineKeyboardButton(text=f"💳 Банковские карты ({round(cards, 3)} {money_currency})", callback_data="add_cards")],
+            [InlineKeyboardButton(text=f"🎫 Крипта ({round(crypto, 3)} {crypto_currency}) ", callback_data="add_crypto")], 
         ]
     )
     await message.answer("📈 Выберите место куда добавляете деньги", reply_markup=keyboard)
@@ -204,7 +210,7 @@ async def invoice_add_cash_text(message: Message, state: FSMContext):
     all_cash = data_user.cash + amount
     money_currency = data_user.money_currency
     push_data_user = {
-        "cash": all_cash,
+        "cash": round(all_cash, 3),
     }
     confirm_user = await update_user(id, push_data_user)
     if confirm_user is True:
@@ -217,7 +223,7 @@ async def invoice_add_cash_text(message: Message, state: FSMContext):
         "category": category,
         "flow": flow,
         "is_cash": is_cash,
-        "amount": amount,
+        "amount": round(amount, 3),
         "users_id": id,
         "date": date
     }
@@ -279,7 +285,7 @@ async def invoice_add_cards_text(message: Message, state: FSMContext):
     all_cards = data_user.cards + amount
     money_currency = data_user.money_currency
     push_data_user = {
-        "cards": all_cards,
+        "cards": round(all_cards, 3),
     }
     confirm_user = await update_user(id, push_data_user)
     if confirm_user is True:
@@ -292,7 +298,7 @@ async def invoice_add_cards_text(message: Message, state: FSMContext):
         "category": category,
         "flow": flow,
         "is_cards": is_cards,
-        "amount": amount,
+        "amount": round(amount, 3),
         "users_id": id,
         "date": date
     }
@@ -354,7 +360,7 @@ async def invoice_add_crypto_text(message: Message, state: FSMContext):
     all_crypto = data_user.crypto + amount
     crypto_currency = data_user.crypto_currency
     push_data_user = {
-        "crypto": all_crypto,
+        "crypto": round(all_crypto, 3),
     }
     confirm_user = await update_user(id, push_data_user)
     if confirm_user is True:
@@ -367,7 +373,7 @@ async def invoice_add_crypto_text(message: Message, state: FSMContext):
         "category": category,
         "flow": flow,
         "is_crypto": is_crypto,
-        "amount": amount,
+        "amount": round(amount, 3),
         "users_id": id,
         "date": date
     }
@@ -398,9 +404,9 @@ async def menu_del(message: types.Message):
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=f"💵 Наличность ({cash} {money_currency})", callback_data="del_cash")],
-            [InlineKeyboardButton(text=f"💳 Банковские карты ({cards} {money_currency})", callback_data="del_cards")],
-            [InlineKeyboardButton(text=f"🎫 Крипта ({crypto} {crypto_currency}) ", callback_data="del_crypto")], # 🪪🧾📰
+            [InlineKeyboardButton(text=f"💵 Наличность ({round(cash, 3)} {money_currency})", callback_data="del_cash")],
+            [InlineKeyboardButton(text=f"💳 Банковские карты ({round(cards, 3)} {money_currency})", callback_data="del_cards")],
+            [InlineKeyboardButton(text=f"🎫 Крипта ({round(crypto, 3)} {crypto_currency}) ", callback_data="del_crypto")], # 🪪🧾📰
         ]
     )
     await message.answer("📉 Выберите место расхода", reply_markup=keyboard)
@@ -457,7 +463,7 @@ async def invoice_del_cash_text(message: Message, state: FSMContext):
     all_cash = data_user.cash - amount
     money_currency = data_user.money_currency
     push_data_user = {
-        "cash": all_cash,
+        "cash": round(all_cash, 3),
     }
     confirm_user = await update_user(id, push_data_user)
     if confirm_user is True:
@@ -470,7 +476,7 @@ async def invoice_del_cash_text(message: Message, state: FSMContext):
         "category": category,
         "flow": flow,
         "is_cash": is_cash,
-        "amount": amount,
+        "amount": round(amount, 3),
         "users_id": id,
         "date": date
     }
@@ -530,7 +536,7 @@ async def invoice_add_cards_text(message: Message, state: FSMContext):
     all_cards = data_user.cards - amount
     money_currency = data_user.money_currency
     push_data_user = {
-        "cards": all_cards,
+        "cards": round(all_cards, 3),
     }
     confirm_user = await update_user(id, push_data_user)
     if confirm_user is True:
@@ -543,7 +549,7 @@ async def invoice_add_cards_text(message: Message, state: FSMContext):
         "category": category,
         "flow": flow,
         "is_cards": is_cards,
-        "amount": amount,
+        "amount": round(amount, 3),
         "users_id": id,
         "date": date
     }
@@ -605,7 +611,7 @@ async def invoice_del_crypto_text(message: Message, state: FSMContext):
     all_crypto = data_user.crypto - amount
     crypto_currency = data_user.crypto_currency
     push_data_user = {
-        "crypto": all_crypto,
+        "crypto": round(all_crypto, 3),
     }
     confirm_user = await update_user(id, push_data_user)
     if confirm_user is True:
@@ -618,13 +624,532 @@ async def invoice_del_crypto_text(message: Message, state: FSMContext):
         "category": category,
         "flow": flow,
         "is_crypto": is_crypto,
-        "amount": amount,
+        "amount": round(amount, 3),
         "users_id": id,
         "date": date
     }
     await adding_session(push_data_session)
 
     await state.clear()
+
+
+
+
+
+######### MOVING #############
+
+@dp.message(Command("mov"))
+async def menu_del(message: types.Message):
+        # Data preparation
+    id = user_id(message)
+    n = await get_user_by_id(id)
+    if n:
+        cash = n.cash
+        crypto = n.crypto
+        money_currency = n.money_currency
+        crypto_currency = n.crypto_currency
+        cards = n.cards
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=f"💵 Наличность ({round(cash, 3)} {money_currency})", callback_data="mov_cash")],
+            [InlineKeyboardButton(text=f"💳 Банковские карты ({round(cards, 3)} {money_currency})", callback_data="mov_cards")],
+            [InlineKeyboardButton(text=f"🎫 Крипта ({round(crypto, 3)} {crypto_currency}) ", callback_data="mov_crypto")], # 🪪🧾📰
+        ]
+    )
+    await message.answer("📉 Откуда будем перемещать деньги:", reply_markup=keyboard)
+
+
+
+
+# MOVING MONEY CASH TO CARD OR TO CRYPTO--- 1
+@dp.callback_query(lambda c: c.data == 'mov_cash')
+async def process_mov_cash(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.send_message(callback_query.from_user.id, "Введите сумму перемещаемую из наличности:")
+    await bot.answer_callback_query(callback_query.id)
+    await state.set_state(Form.mov_cash)
+
+# MOVING MONEY CASH --- 2
+@dp.message(Form.mov_cash)
+async def invoice_mov_cash(message: Message, state: FSMContext):
+    id = user_id(message)
+        # Data preparation
+    amount = await is_int_or_float(message.text)
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+        # Сheck cash
+    data_user = await get_user_by_id(id)
+    if data_user is None:
+        await message.answer("Ошибка: Пользователь не найден, начните с /start")
+        return
+    cash = data_user.cash
+    if cash < amount:
+        await message.answer("Ошибка: У вас нет столько налички, попробуйте сумму меньше")
+        return
+        # Сохраняем  данные в state
+    await state.update_data(amount=amount)
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="💳 На карту", callback_data="cash_to_card")], 
+            [InlineKeyboardButton(text="🎫 В крипту", callback_data="cash_to_crypto")],
+
+        ]
+    )
+    await bot.send_message(message.chat.id, f"Выберите место куда перемещаем (RUB):", reply_markup=keyboard)
+    await state.set_state(Form.mov_cash_choice)
+
+
+# MOVING MONEY CASH TO CARD --- 3
+@dp.callback_query(Form.mov_cash_choice, lambda c: c.data == 'cash_to_card')
+async def process_mov_cash_to_card(callback_query: types.CallbackQuery, state: FSMContext):
+    id = callback_query.from_user.id
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
+    data_user = await get_user_by_id(id)
+    new_cash = data_user.cash - amount
+    new_cards = data_user.cards + amount
+    push_data_user = {
+        "cash": round(new_cash, 3),
+        "cards": round(new_cards, 3),
+    }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is False:
+        await bot.send_message(callback_query.from_user.id, "Ошибка в сохранения данных в базу.")
+        # Save cash
+    flow = "-"
+    is_cash = True
+    date = await day_utcnow()
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_cash": is_cash,
+        "amount": round(amount, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Save card
+    flow = "+"
+    is_cards = True
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_cards": is_cards,
+        "amount": round(amount, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Message
+    await bot.send_message(callback_query.from_user.id, "Перемещение сохранено")
+    await bot.answer_callback_query(callback_query.id)
+    await state.clear()
+
+
+# MOVING MONEY CASH TO CRYPTO --- 3
+@dp.callback_query(Form.mov_cash_choice, lambda c: c.data == 'cash_to_crypto')
+async def process_mov_cash_to_crypto(callback_query: types.CallbackQuery, state: FSMContext):
+    id = callback_query.from_user.id
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
+    data_user = await get_user_by_id(id)
+
+    one_usd = await get_exchange()
+    if one_usd is None:
+        one_usd = 100
+        logging.error(f"Failed get exchange")
+    new_cash = data_user.cash - amount
+    new_crypto = data_user.crypto + amount / one_usd
+    push_data_user = {
+        "cash": round(new_cash, 3),
+        "crypto": round(new_crypto, 3),
+    }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is False:
+        await bot.send_message(callback_query.from_user.id, "Ошибка в сохранения данных в базу.")
+        # Save cash
+    flow = "-"
+    is_cash = True
+    date = await day_utcnow()
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_cash": is_cash,
+        "amount": round(amount, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Save card
+    flow = "+"
+    is_crypto = True
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_crypto": is_crypto,
+        "amount": round(amount / one_usd, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Message
+    await bot.send_message(callback_query.from_user.id, "Перемещение сохранено. Возможно, вам придется скорректировать приход с учетом комисии и выбранного курса в P2P. Что учтется ввиде расхода.")
+    await bot.answer_callback_query(callback_query.id)
+    await state.clear()
+
+
+
+
+
+
+
+
+
+
+
+
+# MOVING MONEY CARD TO CASH OR TO CRYPTO--- 1
+@dp.callback_query(lambda c: c.data == 'mov_cards')
+async def process_mov_card(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.send_message(callback_query.from_user.id, "Введите сумму перемещаемую с карты:")
+    await bot.answer_callback_query(callback_query.id)
+    await state.set_state(Form.mov_card)
+
+# MOVING MONEY CARD --- 2
+@dp.message(Form.mov_card)
+async def invoice_mov_card(message: Message, state: FSMContext):
+    id = user_id(message)
+        # Data preparation
+    amount = await is_int_or_float(message.text)
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+        # Сheck cash
+    data_user = await get_user_by_id(id)
+    if data_user is None:
+        await message.answer("Ошибка: Пользователь не найден, начните с /start")
+        return
+    cards = data_user.cards
+    if cards < amount:
+        await message.answer("Ошибка: У вас нет столько на карте, попробуйте сумму меньше")
+        return
+        # Сохраняем  данные в state
+    await state.update_data(amount=amount)
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="💵 В наличку", callback_data="card_to_cash")], 
+            [InlineKeyboardButton(text="🎫 В крипту", callback_data="card_to_crypto")],
+
+        ]
+    )
+    await bot.send_message(message.chat.id, f"Выберите место куда перемещаем (RUB):", reply_markup=keyboard)
+    await state.set_state(Form.mov_card_choice)
+
+
+# MOVING MONEY CASH TO CARD --- 3
+@dp.callback_query(Form.mov_card_choice, lambda c: c.data == 'card_to_cash')
+async def process_mov_card_to_cash(callback_query: types.CallbackQuery, state: FSMContext):
+    id = callback_query.from_user.id
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
+    data_user = await get_user_by_id(id)
+    new_cards = data_user.cards - amount
+    new_cash = data_user.cash + amount
+    push_data_user = {
+        "cash": round(new_cash, 3),
+        "cards": round(new_cards, 3),
+    }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is False:
+        await bot.send_message(callback_query.from_user.id, "Ошибка в сохранения данных в базу.")
+        # Save cash
+    flow = "-"
+    is_cards = True
+    date = await day_utcnow()
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_cards": is_cards,
+        "amount": round(amount, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Save card
+    flow = "+"
+    is_cash = True
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_cash": is_cash,
+        "amount": round(amount, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Message
+    await bot.send_message(callback_query.from_user.id, "Перемещение сохранено")
+    await bot.answer_callback_query(callback_query.id)
+    await state.clear()
+
+
+# MOVING MONEY CASH TO CRYPTO --- 3
+@dp.callback_query(Form.mov_card_choice, lambda c: c.data == 'card_to_crypto')
+async def process_mov_card_to_crypto(callback_query: types.CallbackQuery, state: FSMContext):
+    id = callback_query.from_user.id
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
+    data_user = await get_user_by_id(id)
+
+    one_usd = await get_exchange()
+    if one_usd is None:
+        one_usd = 100
+        logging.error(f"Failed get exchange")
+    new_cards = data_user.cards - amount
+    new_crypto = data_user.crypto + amount / one_usd
+    push_data_user = {
+        "cards": round(new_cards, 3),
+        "crypto": round(new_crypto, 3),
+    }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is False:
+        await bot.send_message(callback_query.from_user.id, "Ошибка в сохранения данных в базу.")
+        # Save cash
+    flow = "-"
+    is_cards = True
+    date = await day_utcnow()
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_cards": is_cards,
+        "amount": round(amount, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Save card
+    flow = "+"
+    is_crypto = True
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_crypto": is_crypto,
+        "amount": round(amount / one_usd, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Message
+    await bot.send_message(callback_query.from_user.id, "Перемещение сохранено. Возможно, вам придется скорректировать приход с учетом комисии и выбранного курса в P2P. Что учтется ввиде расхода.")
+    await bot.answer_callback_query(callback_query.id)
+    await state.clear()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# MOVING MONEY CRYPTO TO CASH OR TO CARDS--- 1
+@dp.callback_query(lambda c: c.data == 'mov_crypto')
+async def process_mov_crypto(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.send_message(callback_query.from_user.id, "Введите сумму перемещаемую с крипты:")
+    await bot.answer_callback_query(callback_query.id)
+    await state.set_state(Form.mov_crypto)
+
+# MOVING MONEY CACRYPTORD --- 2
+@dp.message(Form.mov_crypto)
+async def invoice_mov_crypto(message: Message, state: FSMContext):
+    id = user_id(message)
+        # Data preparation
+    amount = await is_int_or_float(message.text)
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+        # Сheck cash
+    data_user = await get_user_by_id(id)
+    if data_user is None:
+        await message.answer("Ошибка: Пользователь не найден, начните с /start")
+        return
+    crypto = data_user.crypto
+    if crypto < amount:
+        await message.answer("Ошибка: У вас нет столько в крипте, попробуйте сумму меньше")
+        return
+        # Сохраняем  данные в state
+    await state.update_data(amount=amount)
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="💵 В наличку", callback_data="crypto_to_cash")], 
+            [InlineKeyboardButton(text="💳 На курту", callback_data="crypto_to_cards")],
+
+        ]
+    )
+    await bot.send_message(message.chat.id, f"Выберите место куда перемещаем (USD):", reply_markup=keyboard)
+    await state.set_state(Form.mov_crypto_choice)
+
+
+# MOVING MONEY CRYPTO TO CASH --- 3
+@dp.callback_query(Form.mov_crypto_choice, lambda c: c.data == 'crypto_to_cash')
+async def process_mov_crypto_to_cash(callback_query: types.CallbackQuery, state: FSMContext):
+    id = callback_query.from_user.id
+    one_usd = await get_exchange()
+    if one_usd is None:
+        one_usd = 100
+        logging.error(f"Failed get exchange")
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
+    data_user = await get_user_by_id(id)
+    new_crypto = data_user.crypto - amount
+    new_cash = data_user.cash + amount * one_usd
+    push_data_user = {
+        "cash": round(new_cash, 3),
+        "crypto": round(new_crypto, 3),
+    }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is False:
+        await bot.send_message(callback_query.from_user.id, "Ошибка в сохранения данных в базу.")
+        # Save cash
+    flow = "-"
+    is_crypto = True
+    date = await day_utcnow()
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_crypto": is_crypto,
+        "amount": round(amount, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Save card
+    flow = "+"
+    is_cash = True
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_cash": is_cash,
+        "amount": round(amount * one_usd, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Message
+    await bot.send_message(callback_query.from_user.id, "Перемещение сохранено")
+    await bot.answer_callback_query(callback_query.id)
+    await state.clear()
+
+
+# MOVING MONEY CRYPTO TO CARDS --- 3
+@dp.callback_query(Form.mov_crypto_choice, lambda c: c.data == 'crypto_to_cards')
+async def process_mov_card_to_crypto(callback_query: types.CallbackQuery, state: FSMContext):
+    id = callback_query.from_user.id
+        # Извлекаем данные из state
+    data = await state.get_data()
+    amount = data.get('amount')
+    data_user = await get_user_by_id(id)
+
+    one_usd = await get_exchange()
+    if one_usd is None:
+        one_usd = 100
+        logging.error(f"Failed get exchange")
+    new_crypto = data_user.crypto - amount
+    new_cards = data_user.cards + amount * one_usd
+    push_data_user = {
+        "crypto": round(new_crypto, 3),
+        "cards": round(new_cards, 3),
+    }
+    confirm_user = await update_user(id, push_data_user)
+    if confirm_user is False:
+        await bot.send_message(callback_query.from_user.id, "Ошибка в сохранения данных в базу.")
+        # Save cash
+    flow = "-"
+    is_crypto = True
+    date = await day_utcnow()
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_crypto": is_crypto,
+        "amount": round(amount, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Save card
+    flow = "+"
+    is_cards = True
+        # Save Session
+    push_data_session = {
+        "category": "moving",
+        "flow": flow,
+        "is_cards": is_cards,
+        "amount": round(amount * one_usd, 3),
+        "users_id": id,
+        "date": date
+    }
+    await adding_session(push_data_session)
+        # Message
+    await bot.send_message(callback_query.from_user.id, "Перемещение сохранено. Возможно, вам придется скорректировать приход с учетом комисии и выбранного курса в P2P. Что учтется ввиде расхода.")
+    await bot.answer_callback_query(callback_query.id)
+    await state.clear()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
