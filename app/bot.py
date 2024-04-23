@@ -6,7 +6,8 @@ from worker_db import get_user_by_id, adding_user, adding_session, update_user
 from functions import is_int_or_float, day_utcnow
 from exchange import get_exchange
 from category import get_category
-from keys import telegram
+from backupdb import backup_db
+from keys import telegram, is_admin
 import sys
 import os
 import asyncio
@@ -220,7 +221,8 @@ async def invoice_add_cash_text(message: Message, state: FSMContext):
 
         # Save Session
     push_data_session = {
-        "category": category,
+        "ml_category": category,
+        "category": text,
         "flow": flow,
         "is_cash": is_cash,
         "amount": round(amount, 3),
@@ -295,7 +297,8 @@ async def invoice_add_cards_text(message: Message, state: FSMContext):
 
         # Save Session
     push_data_session = {
-        "category": category,
+        "ml_category": category,
+        "category": text,
         "flow": flow,
         "is_cards": is_cards,
         "amount": round(amount, 3),
@@ -370,7 +373,8 @@ async def invoice_add_crypto_text(message: Message, state: FSMContext):
 
         # Save Session
     push_data_session = {
-        "category": category,
+        "ml_category": category,
+        "category": text,
         "flow": flow,
         "is_crypto": is_crypto,
         "amount": round(amount, 3),
@@ -473,7 +477,8 @@ async def invoice_del_cash_text(message: Message, state: FSMContext):
 
         # Save Session
     push_data_session = {
-        "category": category,
+        "ml_category": category,
+        "category": text,
         "flow": flow,
         "is_cash": is_cash,
         "amount": round(amount, 3),
@@ -546,7 +551,8 @@ async def invoice_add_cards_text(message: Message, state: FSMContext):
 
         # Save Session
     push_data_session = {
-        "category": category,
+        "ml_category": category,
+        "category": text,
         "flow": flow,
         "is_cards": is_cards,
         "amount": round(amount, 3),
@@ -621,7 +627,8 @@ async def invoice_del_crypto_text(message: Message, state: FSMContext):
 
         # Save Session
     push_data_session = {
-        "category": category,
+        "ml_category": category,
+        "category": text,
         "flow": flow,
         "is_crypto": is_crypto,
         "amount": round(amount, 3),
@@ -1200,8 +1207,9 @@ async def menu_stat(message: types.Message):
     #id = user_id(message)
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Валюта", callback_data="currency")],
-            [InlineKeyboardButton(text="Язык бота", callback_data="lang")],
+            # [InlineKeyboardButton(text="Валюта", callback_data="currency")],
+            # [InlineKeyboardButton(text="Язык бота", callback_data="lang")],
+            [InlineKeyboardButton(text="Обнуление информации", callback_data="zero")],
             # [InlineKeyboardButton(text="Backup", callback_data="backup")],
         ]
     )
@@ -1223,6 +1231,105 @@ async def process_lang(callback_query: types.CallbackQuery):
 
 #                                                                           #
 ############################# SUB-MENU ######################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######## ADMIN ########
+@dp.message(Command("admin"))
+async def menu_admin(message: types.Message):
+    id = user_id(message)
+    if int(is_admin) != id:
+        await bot.send_message(message.chat.id, "Извините, такой команды нет.")
+        return
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Download Statistic", callback_data="user_stat")],
+            [InlineKeyboardButton(text="Download log", callback_data="log")],
+            # [InlineKeyboardButton(text="Deleted logs", callback_data="del_log")],
+            [InlineKeyboardButton(text="Download Backup", callback_data="backup")],
+            [InlineKeyboardButton(text="Upload and Restore DB", callback_data="push_db")],
+        ]
+    )
+    await message.answer("⚙️ Админка:", reply_markup=keyboard)
+
+# ADMIN --- user_stat
+@dp.callback_query(lambda c: c.data == 'user_stat')
+async def process_user_stat(callback_query: types.CallbackQuery):
+    await bot.send_message(callback_query.from_user.id, "user_stat")
+    await bot.answer_callback_query(callback_query.id)
+
+# ADMIN --- log
+@dp.callback_query(lambda c: c.data == 'log')
+async def process_user_log(callback_query: types.CallbackQuery):
+    await bot.send_message(callback_query.from_user.id, "log")
+    await bot.answer_callback_query(callback_query.id)
+
+# ADMIN --- backup 
+@dp.callback_query(lambda c: c.data == 'backup')
+async def process_backup(callback_query: types.CallbackQuery):
+    confirmation = await backup_db()
+    if confirmation is True:
+        await bot.send_message(callback_query.from_user.id, "Резервная копия базы данных создана успешно и представленна ниже. Сохранены 3 последние версии в рабочей папке, остальные удалены.")
+    else:
+        await bot.send_message(callback_query.from_user.id, "Ошибка создания резервной копии базы данных.")
+
+    await asyncio.sleep(0.5)
+
+    data_folder = Path("./backup_db/")
+
+    files = [entry for entry in data_folder.iterdir() if entry.is_file()] # Получаем список всех файлов в директории
+
+    sorted_files = sorted(files, key=lambda x: x.stat().st_mtime, reverse=True) # Сортируем список файлов по дате изменения (от новых к старым)
+
+    for file_to_delete in sorted_files[3:]: # Оставляем последние 3 файла, удаляем остальные
+        os.remove(file_to_delete)
+    logging.info("Remove all file DB, saved 3 latest files.")
+
+    last_downloaded_file = sorted_files[0] if sorted_files else None   # Последний скачанный файл будет первым в отсортированном списке (новейшим) (адрес)
+    logging.info("Download last DB file.")
+
+    await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(last_downloaded_file))
+    await bot.answer_callback_query(callback_query.id)
+
+
+
+
+# ADMIN --- push_db
+@dp.callback_query(lambda c: c.data == 'push_db')
+async def process_push_db(callback_query: types.CallbackQuery):
+    await bot.send_message(callback_query.from_user.id, "push_db")
+    await bot.answer_callback_query(callback_query.id)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

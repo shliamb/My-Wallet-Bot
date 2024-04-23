@@ -53,6 +53,7 @@ class Sessions(Base):
     __tablename__ = 'sessions'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     category = Column(sqlalchemy.String(1000), default="is no category", server_default="is no category", nullable=False)
+    ml_category = Column(sqlalchemy.String(1000), default="is no category", server_default="is no category", nullable=False)
     flow = Column(sqlalchemy.String(50), default="-", server_default="-", nullable=False) # expense/income
     amount = Column(sqlalchemy.Float, default=0, server_default="0", nullable=False)
     is_cash = Column(sqlalchemy.Boolean, default=False, server_default="False", nullable=False) 

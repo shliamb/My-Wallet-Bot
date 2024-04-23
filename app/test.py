@@ -42,11 +42,43 @@ import asyncio
 
 
 
+# from datetime import datetime, timezone, timedelta
+
+
+# async def day_utcnow() -> datetime:
+#     time_correction = +3 # Moscow
+#     utc_zone = timezone.utc
+#     a = datetime.now(timezone.utc).replace(tzinfo=utc_zone)
+#     a = a + timedelta(hours=time_correction)
+#     day_str = a.strftime("%Y-%m-%d_%H-%M")
+#     # day = datetime.strptime(day_str, '%Y-%m-%d_%H-%M')
+#     print(day_str)
+#     #print("info: Getting the day and time from the server")
+#     return day_str or None
+
+
+# asyncio.run(day_utcnow())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 async def ddf():
     data = await get_all_session()
     for n in data:
         print(n.id)
         print(n.category)
+        print(n.ml_category)
         print(n.flow)
         print(n.amount)
         print(n.is_cash)
