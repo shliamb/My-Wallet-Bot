@@ -2,7 +2,7 @@ import logging
 # При деплое раскоментить
 # logging.getLogger('aiogram').propagate = False # Блокировка логирование aiogram до его импорта
 # logging.basicConfig(level=logging.INFO, filename='log/app.log', filemode='a', format='%(levelname)s - %(asctime)s - %(name)s - %(message)s',) # При деплое активировать логирование в файл
-from worker_db import get_user_by_id, adding_user, adding_session, update_user
+from worker_db import get_user_by_id, adding_user, adding_session, update_user, get_all_users_admin
 from functions import is_int_or_float, day_utcnow
 from exchange import get_exchange
 from category import get_category
@@ -10,7 +10,10 @@ from backupdb import backup_db
 from keys import telegram, is_admin
 import sys
 import os
+import csv
 import asyncio
+import matplotlib.pyplot as plt # Графики
+from io import StringIO, BytesIO
 from pathlib import Path
 from aiogram import Bot, Dispatcher, types, F, Router, html
 from aiogram.enums import ParseMode
@@ -1151,29 +1154,6 @@ async def process_mov_card_to_crypto(callback_query: types.CallbackQuery, state:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ######## Statistic ########
 @dp.message(Command("stat"))
 async def menu_stat(message: types.Message):
@@ -1183,13 +1163,103 @@ async def menu_stat(message: types.Message):
             [InlineKeyboardButton(text="📊 Статистика за месяц", callback_data="stat_month")],
             [InlineKeyboardButton(text="📊 Статистика за год", callback_data="stat_year")],
             # [InlineKeyboardButton(text="📊 ", callback_data="add_crypto")],
+            # За неделю
+            # Месяц
+            # По месяцам года
+            # По годам
+
+
         ]
     )
     await message.answer("📊 Выберите вариант статистики:", reply_markup=keyboard)
 
+
+
+
+
+
 # STAT --- month
 @dp.callback_query(lambda c: c.data == 'stat_month')
 async def process_stat_month(callback_query: types.CallbackQuery):
+
+
+    # График кривой 
+    # # Пример данных для графика
+    # x = [1, 2, 3, 4, 5, 6, 7, 8 , 9, 10]
+    # y = [300, 0, 0, 0, 2500, 1500, -2600, 0, 0, 3000]
+
+    # # plt.figure()
+    # plt.figure(num='MyFigure', figsize=(20, 10), dpi=100, facecolor='w', edgecolor='k', frameon=True)
+    # plt.plot(x, y)
+    # plt.title('График дохода')
+    # plt.xlabel('Число месяца') # X
+    # plt.ylabel('Доход в руб.') # Y
+    # plt.grid(True)
+    # plt.savefig('./graph/graph.png')  # Сохранение графика в файл
+    # plt.close()  # Закрытие объекта figure, чтобы освободить память
+
+
+    # График горизонтальными колонами
+    # plt.figure()
+    # plt.barh(x, y, color='green')  # Создание горизонтальной столбчатой диаграммы
+    # plt.title('График уровней')
+    # plt.xlabel('Значения')
+    # plt.ylabel('Уровни')
+    # plt.grid(axis='x')  # Включение сетки по оси X
+    # plt.savefig('levels_horizontal.png')
+    # plt.close()
+
+    # График вертикальными колонами
+    x = [1, 2, 3, 4, 5, 6, 7, 8 , 9, 10]
+    y = [300, 0, 0, 0, 2500, 1500, -2600, 0, 0, 3000]
+
+    fig, ax = plt.subplots(figsize=(20, 10), dpi=100) # Создание объектов фигуры и осей
+    bars = ax.bar(x, y, color='lightblue')  # Создание столбчатой диаграммы
+
+    # Выделение осей
+    ax.spines['bottom'].set_color('black')
+    ax.spines['bottom'].set_linewidth(2)
+    ax.spines['left'].set_color('black')
+    ax.spines['left'].set_linewidth(2)
+
+    # Удаление верхней и правой границы
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+
+    # Добавление надписей на столбцах
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,  # X позиция надписи
+            height,  # Y позиция надписи
+            f'{height}',  # Текст надписи
+            ha='center',  # Горизонтальное выравнивание
+            va='bottom'  # Вертикальное выравнивание
+        )
+    plt.title('График уровней')
+    plt.xlabel('Уровни')
+    plt.ylabel('Значения')
+    plt.grid(axis='y')  # Включение сетки по оси Y
+    plt.savefig('./graph/graph.png')
+    plt.close()
+
+
+
+
+    # plt.figure(num='MyFigure', figsize=(20, 10), dpi=100, facecolor='w', edgecolor='k', frameon=True)
+    # plt.bar(x, y, color='green')  # Создание столбчатой диаграммы
+    # plt.title('Финансовый график')
+    # plt.xlabel('Числа месяца')
+    # plt.ylabel('Доходы и траты')
+    # plt.grid(axis='y')  # Включение сетки по оси Y
+    # plt.savefig('./graph/graph.png')
+    # plt.close()
+
+
+    if os.path.exists("./graph/graph.png") and os.path.getsize("./graph/graph.png") > 0:
+        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile("./graph/graph.png"))
+
     await bot.send_message(callback_query.from_user.id, "Статистика за месяц")
     await bot.answer_callback_query(callback_query.id)
 
@@ -1198,6 +1268,27 @@ async def process_stat_month(callback_query: types.CallbackQuery):
 async def process_stat_year(callback_query: types.CallbackQuery):
     await bot.send_message(callback_query.from_user.id, "Статистика за год")
     await bot.answer_callback_query(callback_query.id)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1235,24 +1326,6 @@ async def process_lang(callback_query: types.CallbackQuery):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ######## ADMIN ########
 @dp.message(Command("admin"))
 async def menu_admin(message: types.Message):
@@ -1264,9 +1337,8 @@ async def menu_admin(message: types.Message):
         inline_keyboard=[
             [InlineKeyboardButton(text="Download Statistic", callback_data="user_stat")],
             [InlineKeyboardButton(text="Download log", callback_data="log")],
-            # [InlineKeyboardButton(text="Deleted logs", callback_data="del_log")],
             [InlineKeyboardButton(text="Download Backup", callback_data="backup")],
-            [InlineKeyboardButton(text="Upload and Restore DB", callback_data="push_db")],
+            # [InlineKeyboardButton(text="*Upload and Restore DB", callback_data="push_db")],
         ]
     )
     await message.answer("⚙️ Админка:", reply_markup=keyboard)
@@ -1274,14 +1346,53 @@ async def menu_admin(message: types.Message):
 # ADMIN --- user_stat
 @dp.callback_query(lambda c: c.data == 'user_stat')
 async def process_user_stat(callback_query: types.CallbackQuery):
-    await bot.send_message(callback_query.from_user.id, "user_stat")
-    await bot.answer_callback_query(callback_query.id)
+    # id = user_id(callback_query)
+    chat_id = callback_query.message.chat.id
+    # message_id = callback_query.message.message_id
+    data = await get_all_users_admin()
+
+    all_static = []
+    number = 0
+    all_static.append(["№", "id", "Имя", "Полное имя", "Первое имя", "Второе имя", "Донатил", "Дата регистрации"])
+    
+    for user in data:
+        number += 1
+        id = user.id
+        name = user.name
+        full_name = user.full_name
+        first_name = user.first_name
+        last_name = user.last_name
+        did_you_donate = user.did_you_donate
+        date = user.date
+
+        all_static.append([number, id, name, full_name, first_name, last_name, did_you_donate, date]) # added user data
+
+    # Create csv file
+    output = StringIO()
+    writer = csv.writer(output)
+    for row in all_static:
+        writer.writerow(row)
+    csv_data = output.getvalue()
+    output.close()
+
+    # csv file to download
+    file_name = f"Admin-statistic.csv"
+    buffered_input_file = types.input_file.BufferedInputFile(file=csv_data.encode(), filename=file_name)
+    try:
+        await bot.send_document(chat_id=chat_id, document=buffered_input_file)
+        await bot.answer_callback_query(callback_query.id)
+    except:
+        print(f"Error sending documentb Admin stat")
 
 # ADMIN --- log
 @dp.callback_query(lambda c: c.data == 'log')
 async def process_user_log(callback_query: types.CallbackQuery):
-    await bot.send_message(callback_query.from_user.id, "log")
-    await bot.answer_callback_query(callback_query.id)
+    if os.path.exists("./log/app.log") and os.path.getsize("./log/app.log") > 0:
+        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile("./log/app.log"))
+        await bot.answer_callback_query(callback_query.id)
+    else:
+        await bot.send_message(callback_query.from_user.id, "Файл app.log пустой или отсуствует.")
+        await bot.answer_callback_query(callback_query.id)
 
 # ADMIN --- backup 
 @dp.callback_query(lambda c: c.data == 'backup')
@@ -1310,15 +1421,11 @@ async def process_backup(callback_query: types.CallbackQuery):
     await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(last_downloaded_file))
     await bot.answer_callback_query(callback_query.id)
 
-
-
-
-# ADMIN --- push_db
-@dp.callback_query(lambda c: c.data == 'push_db')
-async def process_push_db(callback_query: types.CallbackQuery):
-    await bot.send_message(callback_query.from_user.id, "push_db")
-    await bot.answer_callback_query(callback_query.id)
-
+# # ADMIN --- push_db
+# @dp.callback_query(lambda c: c.data == 'push_db')
+# async def process_push_db(callback_query: types.CallbackQuery):
+#     await bot.send_message(callback_query.from_user.id, "push_db")
+#     await bot.answer_callback_query(callback_query.id)
 
 
 
@@ -1336,8 +1443,7 @@ async def process_push_db(callback_query: types.CallbackQuery):
 
 
 
-
-
+# ??????????????????????
 @dp.message()
 async def my_handler(message: Message):
     await typing(message)

@@ -56,6 +56,15 @@ async def adding_user(user_data) -> bool:
             logging.error(f"Failed to add user data, error: {e}")
             return False
 
+# Read ALL Users to ADMIN
+async def get_all_users_admin():
+    async_session = await create_async_engine_and_session()
+    async with async_session() as session:
+        query = select(User)
+        result = await session.execute(query)
+        data = result.scalars().all()
+        return data or None
+    
 
 #### USERS SESSION #### 
 # Read User Session
