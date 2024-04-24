@@ -7,12 +7,12 @@ from functions import is_int_or_float, day_utcnow
 from exchange import get_exchange
 from category import get_category
 from backupdb import backup_db
+from graph import build_graph
 from keys import telegram, is_admin
 import sys
 import os
 import csv
 import asyncio
-import matplotlib.pyplot as plt # Графики
 from io import StringIO, BytesIO
 from pathlib import Path
 from aiogram import Bot, Dispatcher, types, F, Router, html
@@ -1177,87 +1177,22 @@ async def menu_stat(message: types.Message):
 
 
 
-
 # STAT --- month
 @dp.callback_query(lambda c: c.data == 'stat_month')
 async def process_stat_month(callback_query: types.CallbackQuery):
-
-
-    # График кривой 
-    # # Пример данных для графика
-    # x = [1, 2, 3, 4, 5, 6, 7, 8 , 9, 10]
-    # y = [300, 0, 0, 0, 2500, 1500, -2600, 0, 0, 3000]
-
-    # # plt.figure()
-    # plt.figure(num='MyFigure', figsize=(20, 10), dpi=100, facecolor='w', edgecolor='k', frameon=True)
-    # plt.plot(x, y)
-    # plt.title('График дохода')
-    # plt.xlabel('Число месяца') # X
-    # plt.ylabel('Доход в руб.') # Y
-    # plt.grid(True)
-    # plt.savefig('./graph/graph.png')  # Сохранение графика в файл
-    # plt.close()  # Закрытие объекта figure, чтобы освободить память
-
-
-    # График горизонтальными колонами
-    # plt.figure()
-    # plt.barh(x, y, color='green')  # Создание горизонтальной столбчатой диаграммы
-    # plt.title('График уровней')
-    # plt.xlabel('Значения')
-    # plt.ylabel('Уровни')
-    # plt.grid(axis='x')  # Включение сетки по оси X
-    # plt.savefig('levels_horizontal.png')
-    # plt.close()
+    await bot.send_chat_action(callback_query.from_user.id, action='typing')
+    await callback_query.answer() # Подтверждение получения
 
     # График вертикальными колонами
-    x = [1, 2, 3, 4, 5, 6, 7, 8 , 9, 10]
-    y = [300, 0, 0, 0, 2500, 1500, -2600, 0, 0, 3000]
-
-    fig, ax = plt.subplots(figsize=(20, 10), dpi=100) # Создание объектов фигуры и осей
-    bars = ax.bar(x, y, color='lightblue')  # Создание столбчатой диаграммы
-
-    # Выделение осей
-    ax.spines['bottom'].set_color('black')
-    ax.spines['bottom'].set_linewidth(2)
-    ax.spines['left'].set_color('black')
-    ax.spines['left'].set_linewidth(2)
-
-    # Удаление верхней и правой границы
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    x = [1, 2, 3, 4, 5, 6, 7, 8 , 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    y = [300, 0, 0, 0, 2500, 1500, -2600, 0, 0, 3000, 200, 1500, 1500, 400, 500, -10, 300]
 
 
-    # Добавление надписей на столбцах
-    for bar in bars:
-        height = bar.get_height()
-        ax.text(
-            bar.get_x() + bar.get_width() / 2,  # X позиция надписи
-            height,  # Y позиция надписи
-            f'{height}',  # Текст надписи
-            ha='center',  # Горизонтальное выравнивание
-            va='bottom'  # Вертикальное выравнивание
-        )
-    plt.title('График уровней')
-    plt.xlabel('Уровни')
-    plt.ylabel('Значения')
-    plt.grid(axis='y')  # Включение сетки по оси Y
-    plt.savefig('./graph/graph.png')
-    plt.close()
+    confirm = await build_graph(x,y)
 
 
 
-
-    # plt.figure(num='MyFigure', figsize=(20, 10), dpi=100, facecolor='w', edgecolor='k', frameon=True)
-    # plt.bar(x, y, color='green')  # Создание столбчатой диаграммы
-    # plt.title('Финансовый график')
-    # plt.xlabel('Числа месяца')
-    # plt.ylabel('Доходы и траты')
-    # plt.grid(axis='y')  # Включение сетки по оси Y
-    # plt.savefig('./graph/graph.png')
-    # plt.close()
-
-
-    if os.path.exists("./graph/graph.png") and os.path.getsize("./graph/graph.png") > 0:
+    if confirm is True and os.path.exists("./graph/graph.png") and os.path.getsize("./graph/graph.png") > 0:
         await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile("./graph/graph.png"))
 
     await bot.send_message(callback_query.from_user.id, "Статистика за месяц")
