@@ -3,3 +3,5 @@ app/__pycache__/
 .env
 in_time
 backup_db/
+bad/
+app/test.py
