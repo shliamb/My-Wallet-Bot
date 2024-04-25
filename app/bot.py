@@ -7,7 +7,7 @@ from functions import is_int_or_float, day_utcnow, re_day, re_month
 from exchange import get_exchange
 from category import get_category
 from backupdb import backup_db
-from graph import build_graph
+from graph import build_graph, build_graph_hor
 from keys import telegram, is_admin
 import sys
 import os
@@ -1258,46 +1258,159 @@ async def process_stat_cat_month(callback_query: types.CallbackQuery):
         await bot.send_message(callback_query.from_user.id, "К сожалению, в этом месяце нет транзакций.")
         await bot.answer_callback_query(callback_query.id)
         return
-    # Собираю доходы - расходы одного дня и вывожу в обной колонке результат, в результате график текущего месяца
+
+
     x = []
     y = []
-    income = expenses = null_day = null_amount = i = 0
+
+    are = "Жильё (аренда, ипотека)"
+    com = "Коммунальные услуги (электричество, вода, газ)"
+    prod = "Продукты питания"
+    tra = "Транспорт (автомобиль, общественный транспорт)"
+    zdor = "Здравоохранение (медицинские услуги, лекарства)"
+    shc = "Образование (школа, университет)"
+    rest = "Отдых и развлечения"
+    shuz =  "Одежда и аксессуары"
+    inet = "Связь и интернет"
+    subs = "Платные подписки"
+    lich = "Личная гигиена и уход"
+    hel = "Подарки и благотворительность"
+    inv = "Сбережения и инвестиции"
+    cred = "Налоги и кредиты"
+    alim = "Алименты"
+    chil = "Покупки детям"
+    cruj = "Дополнительные занятия дети"
+    site = "Хостинг, сайт, домены"
+    zap = "Запчасти"
+    wom = "Услуги противоположного пола"
+    canc = "Канцелярия"
+
+    m_canc = m_wom = m_zap = m_site = m_cruj = m_chil = m_alim = m_cred = m_inv = m_hel = m_lich = m_subs = m_shuz = m_rest = m_shc = m_zdor = m_tra = m_com = m_are = m_inet = m_prod = 0
+    i = 0
 
     for n in data:
-        i += 1
-        day = int(await re_day(n.date))  # Преобразование даты в int
-        amount = float(n.amount)
-        if n.flow == '-':  # n.flow может быть '+' или '-'
-            amount = -amount
-            expenses = expenses + amount
-        elif n.flow == '+':
-            income = income + amount
-
-        if null_day == 0:
-            null_day = day
+        if i == 0:
             # Получение месяца 
             name_month = await re_month(n.date)
 
-        if day == null_day:
-            null_amount += amount
-        else:
-            x.append(null_day)
-            y.append(round(null_amount, 2))
-            null_day = day
-            null_amount = amount
+        if n.flow == '-':
+            if n.ml_category == prod:
+                m_prod = m_prod + n.amount
+            if n.ml_category == inet:
+                m_inet = m_inet + n.amount
+            if n.ml_category == are:
+                m_are = m_are + n.amount
+            if n.ml_category == com:
+                m_com = m_com + n.amount
+            if n.ml_category == tra:
+                m_tra = m_tra + n.amount
+            if n.ml_category == zdor:
+                m_zdor = m_zdor + n.amount
+            if n.ml_category == shc:
+                m_shc = m_shc + n.amount
+            if n.ml_category == rest:
+                m_rest = m_rest + n.amount
+            if n.ml_category == shuz:
+                m_shuz = m_shuz + n.amount
+            if n.ml_category == subs:
+                m_subs = m_subs + n.amount
+            if n.ml_category == lich:
+                m_lich = m_lich + n.amount
+            if n.ml_category == hel:
+                m_hel = m_hel + n.amount
+            if n.ml_category == inv:
+                m_inv = m_inv + n.amount
+            if n.ml_category == cred:
+                m_cred = m_cred + n.amount
+            if n.ml_category == alim:
+                m_alim = m_alim + n.amount
+            if n.ml_category == chil:
+                m_chil = m_chil + n.amount
+            if n.ml_category == cruj:
+                m_cruj = m_cruj + n.amount
+            if n.ml_category == site:
+                m_site = m_site + n.amount
+            if n.ml_category == zap:
+                m_zap = m_zap + n.amount
+            if n.ml_category == wom:
+                m_wom = m_wom + n.amount
+            if n.ml_category == canc:
+                m_canc = m_canc + n.amount
+        i += 1
 
-        if i == len(data):
-            x.append(day)
-            y.append(round(null_amount, 2))
+    if m_canc != 0:
+        x.append(canc)
+        y.append(m_canc)
+    if m_wom != 0:
+        x.append(wom)
+        y.append(m_wom)
+    if m_zap != 0:
+        x.append(zap)
+        y.append(m_zap)
+    if m_site != 0:
+        x.append(site)
+        y.append(m_site)
+    if m_cruj != 0:
+        x.append(cruj)
+        y.append(m_cruj)
+    if m_chil != 0:
+        x.append(chil)
+        y.append(m_chil)
+    if m_alim != 0:
+        x.append(alim)
+        y.append(m_alim)
+    if m_cred != 0:
+        x.append(cred)
+        y.append(m_cred)
+    if m_inv != 0:
+        x.append(inv)
+        y.append(m_inv)
+    if m_hel != 0:
+        x.append(hel)
+        y.append(m_hel)
+    if m_lich != 0:
+        x.append(lich)
+        y.append(m_lich)
+    if m_subs != 0:
+        x.append(subs)
+        y.append(m_subs)
+    if m_shuz != 0:
+        x.append(shuz)
+        y.append(m_shuz)
+    if m_rest != 0:
+        x.append(rest)
+        y.append(m_rest)
+    if m_shc != 0:
+        x.append(shc)
+        y.append(m_shc)
+    if m_zdor != 0:
+        x.append(zdor)
+        y.append(m_zdor)
+    if m_tra != 0:
+        x.append(tra)
+        y.append(m_tra)
+    if m_com != 0:
+        x.append(com)
+        y.append(m_com)
+    if m_prod != 0:
+        x.append(prod)
+        y.append(m_prod)
+    if m_inet != 0:
+        x.append(inet)
+        y.append(m_inet)
+    if m_are != 0:
+        x.append(are)
+        y.append(m_are)
 
-    confirm = await build_graph(id, x, y, name_month) # Построение графика
 
-    if confirm is True and os.path.exists(f"./graph/graph_{id}.png") and os.path.getsize(f"./graph/graph_{id}.png") > 0:
-        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/graph_{id}.png"))
+    confirm = await build_graph_hor(id, x, y, name_month) # Построение графика
+
+    if confirm is True and os.path.exists(f"./graph/graph_{id}_hor.png") and os.path.getsize(f"./graph/graph_{id}_hor.png") > 0:
+        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/graph_{id}_hor.png"))
 
         # После передачи графика, тут же удаляю его на сервере
     directory_path = "./graph/"
-    file_name_to_delete = f"graph_{id}.png"
+    file_name_to_delete = f"graph_{id}_hor.png"
 
         # Поиск файла в папке
     for filename in os.listdir(directory_path):
@@ -1311,7 +1424,7 @@ async def process_stat_cat_month(callback_query: types.CallbackQuery):
     else:
         print(f"ERROR: Файл {file_name_to_delete} не найден в папке {directory_path}")
 
-    await bot.send_message(callback_query.from_user.id, f"Статистика за {name_month}:\n\nОбщий доход: {round(income, 2)}\nОбщий расход: {round(expenses, 2)}\nОстаток: {round(income - (expenses * -1), 2)}")
+    #await bot.send_message(callback_query.from_user.id, f"Статистика за {name_month}:\n\nОбщий доход: {round(income, 2)}\nОбщий расход: {round(expenses, 2)}\nОстаток: {round(income - (expenses * -1), 2)}")
     
     await bot.answer_callback_query(callback_query.id)
     await callback_query.answer() # Подтверждение получения

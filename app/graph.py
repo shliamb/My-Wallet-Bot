@@ -39,8 +39,32 @@ async def build_graph(id, x, y, name_month):
 
 
 
-if __name__ == "__main__":
-    asyncio.run(build_graph())
+
+
+
+
+
+async def build_graph_hor(id, x, y, name_month):
+
+    plt.figure(figsize=(20, 10), dpi=100, facecolor='w', edgecolor='k', frameon=True) # num='MyFigure', 
+    bars = plt.barh(x, y, color='lightblue')  # Создание горизонтальной столбчатой диаграммы
+    plt.title(f'Категории расходов, {name_month}')
+    plt.xlabel('Суммы в руб.')
+    plt.ylabel('Категории расходов')
+    plt.grid(axis='x')  # Включение сетки по оси X
+
+    # Добавление текста к каждой полосе
+    for bar in bars:
+        plt.text(
+            bar.get_width(),       # X координата, начало полосы + её ширина
+            bar.get_y() + bar.get_height() / 2,  # Y координата, центр полосы
+            f' {bar.get_width()}', # Текст, который будет отображаться (значение Y)
+            va='center'            # Вертикальное выравнивание по центру
+        )
+
+    plt.savefig(f'./graph/graph_{id}_hor.png')
+    plt.close()
+    return True
 
 
 
@@ -52,6 +76,25 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# if __name__ == "__main__":
+#     asyncio.run(build_graph_hor())
 
 
 
@@ -88,3 +131,7 @@ if __name__ == "__main__":
     # plt.grid(axis='x')  # Включение сетки по оси X
     # plt.savefig('levels_horizontal.png')
     # plt.close()
+
+
+    # if __name__ == "__main__":
+#     asyncio.run(build_graph())
