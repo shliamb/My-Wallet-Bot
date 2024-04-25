@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt # Графики
 import asyncio
 
 
-async def build_graph(x, y):
+async def build_graph(id, x, y, name_month):
     fig, ax = plt.subplots(figsize=(20, 10), dpi=100) # Создание объектов фигуры и осей
     bars = ax.bar(x, y, color='lightblue')  # Создание столбчатой диаграммы
 
@@ -28,11 +28,11 @@ async def build_graph(x, y):
             va='bottom'  # Вертикальное выравнивание
         )
     plt.xticks(x)
-    plt.title('Статистика движения финансов')
-    plt.xlabel('Апрель')
+    plt.title('Общая статистика доход - расход по дням текущего месяца')
+    plt.xlabel(name_month)
     plt.ylabel('Суммы')
     plt.grid(axis='y')  # Включение сетки по оси Y
-    plt.savefig('./graph/graph.png')
+    plt.savefig(f'./graph/graph_{id}.png')
     plt.close()
     return True
 

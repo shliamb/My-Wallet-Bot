@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from models import Base, User, Sessions, Task
-from sqlalchemy import select, insert, update, join, func
+from sqlalchemy import select, insert, update, extract, join, func
+from datetime import datetime, timezone, timedelta
 
 async def create_async_engine_and_session():                               # localhost @postgres
     engine = create_async_engine(f"postgresql+asyncpg://{user_db}:{paswor_db}@localhost:5432/my_database") # echo=True - вывод логирования
@@ -124,6 +125,37 @@ async def get_all_session_at_id(id):
         data = result.scalars().all()
         return data or None
 # All sessions of one user per month/period
+
+
+# Получить все сессии по ID пользователя за текущий месяц и год
+async def get_session_by_month(id):
+    async_session = await create_async_engine_and_session()
+    async with async_session() as session:
+
+        time_correction = +3 # Moscow
+        utc_zone = timezone.utc
+        a = datetime.now(timezone.utc).replace(tzinfo=utc_zone)
+        a = a + timedelta(hours=time_correction)
+        month = int(a.strftime("%m"))
+        year = int(a.strftime("%Y"))
+
+        query = (
+        select(Sessions)
+        .filter(Sessions.users_id == id) 
+        .filter(Sessions.amount != 0) # Не нулевые транзакции
+        .filter(Sessions.category != "moving") # Не перемещения
+        .filter(
+            extract('month', Sessions.date) == month,
+            extract('year', Sessions.date) == year
+        )
+        )
+        result = await session.execute(query)
+        data = result.scalars().all()
+        return data or None
+
+
+
+
 
 # Maybe any think else
 

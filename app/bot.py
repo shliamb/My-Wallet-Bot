@@ -2,8 +2,8 @@ import logging
 # При деплое раскоментить
 # logging.getLogger('aiogram').propagate = False # Блокировка логирование aiogram до его импорта
 # logging.basicConfig(level=logging.INFO, filename='log/app.log', filemode='a', format='%(levelname)s - %(asctime)s - %(name)s - %(message)s',) # При деплое активировать логирование в файл
-from worker_db import get_user_by_id, adding_user, adding_session, update_user, get_all_users_admin
-from functions import is_int_or_float, day_utcnow
+from worker_db import get_user_by_id, adding_user, adding_session, update_user, get_all_users_admin, get_session_by_month
+from functions import is_int_or_float, day_utcnow, re_day, re_month
 from exchange import get_exchange
 from category import get_category
 from backupdb import backup_db
@@ -99,7 +99,7 @@ EN\nHi, {html.bold(message.from_user.full_name)}!\n\n\
         BotCommand(command="/del", description="📉 Расход"),
         BotCommand(command="/mov", description="💸 Перемещение"), 
         BotCommand(command="/stat", description="📊 Статистика"),
-        BotCommand(command="/set", description="⚙️ Настройки"),
+        # BotCommand(command="/set", description="⚙️ Настройки"),
     ]
     await bot.set_my_commands(bot_commands)
     return
@@ -180,9 +180,13 @@ async def process_add_cash(callback_query: types.CallbackQuery, state: FSMContex
 # ADD MONEY CASH --- 2
 @dp.message(Form.add_cash, F.content_type.in_({'text'}))
 async def invoice_add_cash(message: Message, state: FSMContext):
-    await message.answer("Введите комментарий к пополнению:")
         # Data preparation
     amount = await is_int_or_float(message.text)
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+    await message.answer("Введите комментарий к пополнению:")
         # Сохраняем  данные в state
     await state.update_data(amount=amount)
     await state.set_state(Form.add_cash_text)
@@ -200,11 +204,6 @@ async def invoice_add_cash_text(message: Message, state: FSMContext):
     flow = "+"
     is_cash = True
     date = await day_utcnow()
-
-        # Сheck in
-    if amount is None:
-        await message.answer("Ошибка: Введите сумму цифрами")
-        return
 
         # Saving a shared account User
     data_user = await get_user_by_id(id)
@@ -256,9 +255,13 @@ async def process_add_cards(callback_query: types.CallbackQuery, state: FSMConte
 # ADD MONEY CARD --- 2
 @dp.message(Form.add_cards, F.content_type.in_({'text'}))
 async def invoice_add_cards(message: Message, state: FSMContext):
-    await message.answer("Введите комментарий к пополнению:")
         # Data preparation
     amount = await is_int_or_float(message.text)
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+    await message.answer("Введите комментарий к пополнению:")
         # Сохраняем  данные в state
     await state.update_data(amount=amount)
     await state.set_state(Form.add_cards_text)
@@ -276,11 +279,6 @@ async def invoice_add_cards_text(message: Message, state: FSMContext):
     flow = "+"
     is_cards = True
     date = await day_utcnow()
-
-        # Сheck in
-    if amount is None:
-        await message.answer("Ошибка: Введите сумму цифрами")
-        return
 
         # Saving a shared account User
     data_user = await get_user_by_id(id)
@@ -332,9 +330,13 @@ async def process_add_crypto(callback_query: types.CallbackQuery, state: FSMCont
 # ADD MONEY CRYPTO --- 2
 @dp.message(Form.add_crypto, F.content_type.in_({'text'}))
 async def invoice_add_crypto(message: Message, state: FSMContext):
-    await message.answer("Введите комментарий к пополнению:")
         # Data preparation
     amount = await is_int_or_float(message.text)
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+    await message.answer("Введите комментарий к пополнению:")
         # Сохраняем  данные в state
     await state.update_data(amount=amount)
     await state.set_state(Form.add_crypto_text)
@@ -352,11 +354,6 @@ async def invoice_add_crypto_text(message: Message, state: FSMContext):
     flow = "+"
     is_crypto = True
     date = await day_utcnow()
-
-        # Сheck in
-    if amount is None:
-        await message.answer("Ошибка: Введите сумму цифрами")
-        return
 
         # Saving a shared account User
     data_user = await get_user_by_id(id)
@@ -436,9 +433,13 @@ async def process_del_cash(callback_query: types.CallbackQuery, state: FSMContex
 # DEL MONEY CASH --- 2
 @dp.message(Form.del_cash, F.content_type.in_({'text'}))
 async def invoice_del_cash(message: Message, state: FSMContext):
-    await message.answer("Введите комментарий к расходу:")
         # Data preparation
     amount = await is_int_or_float(message.text)
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+    await message.answer("Введите комментарий к пополнению:")
         # Сохраняем  данные в state
     await state.update_data(amount=amount)
     await state.set_state(Form.del_cash_text)
@@ -456,11 +457,6 @@ async def invoice_del_cash_text(message: Message, state: FSMContext):
     flow = "-"
     is_cash = True
     date = await day_utcnow()
-
-        # Сheck in
-    if amount is None:
-        await message.answer("Ошибка: Введите сумму цифрами")
-        return
 
         # Saving a shared account User
     data_user = await get_user_by_id(id)
@@ -510,9 +506,13 @@ async def process_del_cards(callback_query: types.CallbackQuery, state: FSMConte
 # DEL MONEY CARD --- 2
 @dp.message(Form.del_cards, F.content_type.in_({'text'}))
 async def invoice_del_cards(message: Message, state: FSMContext):
-    await message.answer("Введите комментарий к расходу:")
         # Data preparation
     amount = await is_int_or_float(message.text)
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+    await message.answer("Введите комментарий к пополнению:")
         # Сохраняем  данные в state
     await state.update_data(amount=amount)
     await state.set_state(Form.del_cards_text)
@@ -530,11 +530,6 @@ async def invoice_add_cards_text(message: Message, state: FSMContext):
     flow = "-"
     is_cards = True
     date = await day_utcnow()
-
-        # Сheck in
-    if amount is None:
-        await message.answer("Ошибка: Введите сумму цифрами")
-        return
 
         # Saving a shared account User
     data_user = await get_user_by_id(id)
@@ -586,9 +581,13 @@ async def process_del_crypto(callback_query: types.CallbackQuery, state: FSMCont
 # DEL MONEY CRYPTO --- 2
 @dp.message(Form.del_crypto, F.content_type.in_({'text'}))
 async def invoice_del_crypto(message: Message, state: FSMContext):
-    await message.answer("Введите комментарий к снятию:")
         # Data preparation
     amount = await is_int_or_float(message.text)
+        # Сheck in
+    if amount is None:
+        await message.answer("Ошибка: Введите сумму цифрами")
+        return
+    await message.answer("Введите комментарий к пополнению:")
         # Сохраняем  данные в state
     await state.update_data(amount=amount)
     await state.set_state(Form.del_crypto_text)
@@ -606,11 +605,6 @@ async def invoice_del_crypto_text(message: Message, state: FSMContext):
     flow = "-"
     is_crypto = True
     date = await day_utcnow()
-
-        # Сheck in
-    if amount is None:
-        await message.answer("Ошибка: Введите сумму цифрами")
-        return
 
         # Saving a shared account User
     data_user = await get_user_by_id(id)
@@ -649,7 +643,7 @@ async def invoice_del_crypto_text(message: Message, state: FSMContext):
 ######### MOVING #############
 
 @dp.message(Command("mov"))
-async def menu_del(message: types.Message):
+async def menu_mov(message: types.Message):
         # Data preparation
     id = user_id(message)
     n = await get_user_by_id(id)
@@ -1160,7 +1154,8 @@ async def menu_stat(message: types.Message):
     #id = user_id(message)
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="📊 Статистика за месяц", callback_data="stat_month")],
+            [InlineKeyboardButton(text="📊 Фин. статистика за тек. месяц", callback_data="stat_month")],
+            [InlineKeyboardButton(text="📊 Категории расходов за тек. месяц", callback_data="stat_cat_month")],
             [InlineKeyboardButton(text="📊 Статистика за год", callback_data="stat_year")],
             # [InlineKeyboardButton(text="📊 ", callback_data="add_crypto")],
             # За неделю
@@ -1177,26 +1172,158 @@ async def menu_stat(message: types.Message):
 
 
 
-# STAT --- month
+# Фин. Статистика по id пользователя по дням текущего месяца доход
 @dp.callback_query(lambda c: c.data == 'stat_month')
 async def process_stat_month(callback_query: types.CallbackQuery):
     await bot.send_chat_action(callback_query.from_user.id, action='typing')
+
+    id = callback_query.from_user.id
+    data = await get_session_by_month(id)
+
+    if data is None:
+        await bot.send_message(callback_query.from_user.id, "К сожалению, в этом месяце нет транзакций.")
+        await bot.answer_callback_query(callback_query.id)
+        return
+    # Собираю доходы - расходы одного дня и вывожу в обной колонке результат, в результате график текущего месяца
+    x = []
+    y = []
+    income = expenses = null_day = null_amount = i = 0
+
+    for n in data:
+        i += 1
+        day = int(await re_day(n.date))  # Преобразование даты в int
+        amount = float(n.amount)
+        if n.flow == '-':  # n.flow может быть '+' или '-'
+            amount = -amount
+            expenses = expenses + amount
+        elif n.flow == '+':
+            income = income + amount
+
+        if null_day == 0:
+            null_day = day
+            # Получение месяца 
+            name_month = await re_month(n.date)
+
+        if day == null_day:
+            null_amount += amount
+        else:
+            x.append(null_day)
+            y.append(round(null_amount, 2))
+            null_day = day
+            null_amount = amount
+
+        if i == len(data):
+            x.append(day)
+            y.append(round(null_amount, 2))
+
+    confirm = await build_graph(id, x, y, name_month) # Построение графика
+
+    if confirm is True and os.path.exists(f"./graph/graph_{id}.png") and os.path.getsize(f"./graph/graph_{id}.png") > 0:
+        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/graph_{id}.png"))
+
+        # После передачи графика, тут же удаляю его на сервере
+    directory_path = "./graph/"
+    file_name_to_delete = f"graph_{id}.png"
+
+        # Поиск файла в папке
+    for filename in os.listdir(directory_path):
+        if filename == file_name_to_delete:
+                # Путь к файлу, который нужно удалить
+            file_path = os.path.join(directory_path, filename)
+                # Удаление файла
+            os.remove(file_path)
+            print(f"INFO: Файл {file_path} был удален на сервере.")
+            break  # Прерываем цикл после удаления файла
+    else:
+        print(f"ERROR: Файл {file_name_to_delete} не найден в папке {directory_path}")
+
+    await bot.send_message(callback_query.from_user.id, f"Статистика за {name_month}:\n\nОбщий доход: {round(income, 2)}\nОбщий расход: {round(expenses, 2)}\nОстаток: {round(income - (expenses * -1), 2)}")
+    
+    await bot.answer_callback_query(callback_query.id)
     await callback_query.answer() # Подтверждение получения
 
-    # График вертикальными колонами
-    x = [1, 2, 3, 4, 5, 6, 7, 8 , 9, 10, 11, 12, 13, 14, 15, 16, 17]
-    y = [300, 0, 0, 0, 2500, 1500, -2600, 0, 0, 3000, 200, 1500, 1500, 400, 500, -10, 300]
-
-
-    confirm = await build_graph(x,y)
 
 
 
-    if confirm is True and os.path.exists("./graph/graph.png") and os.path.getsize("./graph/graph.png") > 0:
-        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile("./graph/graph.png"))
 
-    await bot.send_message(callback_query.from_user.id, "Статистика за месяц")
+# Статистика категорий расходов за месяц текущий по id пользователя
+@dp.callback_query(lambda c: c.data == 'stat_cat_month')
+async def process_stat_cat_month(callback_query: types.CallbackQuery):
+    await bot.send_chat_action(callback_query.from_user.id, action='typing')
+
+    id = callback_query.from_user.id
+    data = await get_session_by_month(id)
+
+    if data is None:
+        await bot.send_message(callback_query.from_user.id, "К сожалению, в этом месяце нет транзакций.")
+        await bot.answer_callback_query(callback_query.id)
+        return
+    # Собираю доходы - расходы одного дня и вывожу в обной колонке результат, в результате график текущего месяца
+    x = []
+    y = []
+    income = expenses = null_day = null_amount = i = 0
+
+    for n in data:
+        i += 1
+        day = int(await re_day(n.date))  # Преобразование даты в int
+        amount = float(n.amount)
+        if n.flow == '-':  # n.flow может быть '+' или '-'
+            amount = -amount
+            expenses = expenses + amount
+        elif n.flow == '+':
+            income = income + amount
+
+        if null_day == 0:
+            null_day = day
+            # Получение месяца 
+            name_month = await re_month(n.date)
+
+        if day == null_day:
+            null_amount += amount
+        else:
+            x.append(null_day)
+            y.append(round(null_amount, 2))
+            null_day = day
+            null_amount = amount
+
+        if i == len(data):
+            x.append(day)
+            y.append(round(null_amount, 2))
+
+    confirm = await build_graph(id, x, y, name_month) # Построение графика
+
+    if confirm is True and os.path.exists(f"./graph/graph_{id}.png") and os.path.getsize(f"./graph/graph_{id}.png") > 0:
+        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/graph_{id}.png"))
+
+        # После передачи графика, тут же удаляю его на сервере
+    directory_path = "./graph/"
+    file_name_to_delete = f"graph_{id}.png"
+
+        # Поиск файла в папке
+    for filename in os.listdir(directory_path):
+        if filename == file_name_to_delete:
+                # Путь к файлу, который нужно удалить
+            file_path = os.path.join(directory_path, filename)
+                # Удаление файла
+            os.remove(file_path)
+            print(f"INFO: Файл {file_path} был удален на сервере.")
+            break  # Прерываем цикл после удаления файла
+    else:
+        print(f"ERROR: Файл {file_name_to_delete} не найден в папке {directory_path}")
+
+    await bot.send_message(callback_query.from_user.id, f"Статистика за {name_month}:\n\nОбщий доход: {round(income, 2)}\nОбщий расход: {round(expenses, 2)}\nОстаток: {round(income - (expenses * -1), 2)}")
+    
     await bot.answer_callback_query(callback_query.id)
+    await callback_query.answer() # Подтверждение получения
+
+
+
+
+
+
+
+
+
 
 # STAT --- year
 @dp.callback_query(lambda c: c.data == 'stat_year')
@@ -1223,13 +1350,9 @@ async def process_stat_year(callback_query: types.CallbackQuery):
 
 
 
-
-
-
-
 ######## SETINGS ########
 @dp.message(Command("set"))
-async def menu_stat(message: types.Message):
+async def menu_setings(message: types.Message):
     #id = user_id(message)
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -1274,6 +1397,7 @@ async def menu_admin(message: types.Message):
             [InlineKeyboardButton(text="Download log", callback_data="log")],
             [InlineKeyboardButton(text="Download Backup", callback_data="backup")],
             # [InlineKeyboardButton(text="*Upload and Restore DB", callback_data="push_db")],
+            [InlineKeyboardButton(text="Задонатить на развитие", callback_data="donate")],
         ]
     )
     await message.answer("⚙️ Админка:", reply_markup=keyboard)
@@ -1371,21 +1495,50 @@ async def process_backup(callback_query: types.CallbackQuery):
 
 
 
-
-
-
-
-
-
-
-# ??????????????????????
 @dp.message()
 async def my_handler(message: Message):
     await typing(message)
-    await asyncio.sleep(2)
-    result = message.text
-    print(result)
-    await message.answer(result)
+    #await asyncio.sleep(2)
+    if "баланс" in message.text.lower():
+            # Data preparation
+        id = user_id(message)
+        n = await get_user_by_id(id)
+        if n:
+            cash = n.cash
+            crypto = n.crypto
+            money_currency = n.money_currency
+            crypto_currency = n.crypto_currency
+            cards = n.cards
+
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=f"💵 Наличность ({round(cash, 3)} {money_currency})", callback_data="add_cash")],
+                [InlineKeyboardButton(text=f"💳 Банковские карты ({round(cards, 3)} {money_currency})", callback_data="add_cards")],
+                [InlineKeyboardButton(text=f"🎫 Крипта ({round(crypto, 3)} {crypto_currency}) ", callback_data="add_crypto")], 
+            ]
+        )
+        await message.answer("⚖️ Баланс", reply_markup=keyboard)
+
+    elif "статист" in message.text.lower() or "граф" in message.text.lower():
+        await menu_stat(message)
+
+    elif "добав" in message.text.lower():
+        await menu_add(message)
+
+    elif "удал" in message.text.lower() or "убрать" in message.text.lower() or "расход" in message.text.lower():
+        await menu_del(message)
+
+    elif "переме" in message.text.lower() or "перекин" in message.text.lower():
+        await menu_mov(message)
+
+    elif "настро" in message.text.lower() or "установ" in message.text.lower():
+        await menu_setings(message)
+
+    elif "адми" in message.text.lower():
+        await menu_admin(message)
+
+    else:
+        await message.answer("Я просто бот, напишите понятнее пожалуйста.. ")
 
 
 
@@ -1414,6 +1567,8 @@ if __name__ == "__main__":
 
 
 
+# Нулевое добавление
+# Введите цифру
 
 
 
