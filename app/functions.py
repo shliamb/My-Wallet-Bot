@@ -134,7 +134,7 @@ async def sum_cat(flow, date_db):
             one_usdt = await get_exchange()
         
         if n.is_crypto is True:
-            amount = float(n.amount) * one_usdt
+            amount = round(float(n.amount) * one_usdt, 2)
         else:
             amount = float(n.amount)
 

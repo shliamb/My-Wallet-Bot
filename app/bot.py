@@ -1696,16 +1696,6 @@ async def process_backup(callback_query: types.CallbackQuery):
 
 
 
-
-
-
-# # ADMIN --- push_db
-# @dp.callback_query(lambda c: c.data == 'push_db')
-# async def process_push_db(callback_query: types.CallbackQuery):
-#     await bot.send_message(callback_query.from_user.id, "push_db")
-#     await bot.answer_callback_query(callback_query.id)
-
-
 #
 # Admin Restore DB
 #
