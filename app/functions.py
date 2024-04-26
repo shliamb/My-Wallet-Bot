@@ -26,6 +26,13 @@ async def day_utcnow() -> datetime:
     return day or None
 
 
+# UNFORMAT TIME
+async def unformat_date(date) -> str | int:
+    day_now = str(date.strftime("%Y-%m-%d"))
+    time_now = float(date.strftime("%H.%M"))
+    return day_now, time_now
+
+
 # Регулярное выражение для поиска числа дня в формате YYYY-MM-DD взятого из базы
 async def re_day(date_string):
     day_str = date_string.strftime("%Y-%m-%d %H:%M:%S")
@@ -269,18 +276,6 @@ async def sum_cat(flow, date_db):
 
 
 
-
-
-
-
-
-
-
-# # UNFORMAT TIME
-# async def unformat_date(date) -> str | int:
-#     day_now = str(date.strftime("%Y-%m-%d"))
-#     time_now = float(date.strftime("%H.%M"))
-#     return day_now, time_now
 
 
 

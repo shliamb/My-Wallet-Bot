@@ -3,7 +3,7 @@ version: '3.8'
 services:
 
   postgres:
-    image: postgres:16.1 #latest # 14
+    image: postgres:15.6 # latest # 16.1 
     container_name: app_postgres
     environment:
       POSTGRES_USER: ${USER_DB}

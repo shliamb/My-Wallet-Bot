@@ -3,10 +3,11 @@ import logging
 logging.getLogger('aiogram').propagate = False # Блокировка логирование aiogram до его импорта
 logging.basicConfig(level=logging.INFO, filename='log/app.log', filemode='a', format='%(levelname)s - %(asctime)s - %(name)s - %(message)s',) # При деплое активировать логирование в файл
 from worker_db import get_user_by_id, adding_user, adding_session, update_user, get_all_users_admin, get_session_by_month, get_session_stat_year
-from functions import is_int_or_float, day_utcnow, re_day, re_month, sum_cat, re_year
+from functions import is_int_or_float, day_utcnow, re_day, re_month, sum_cat, re_year, unformat_date
 from exchange import get_exchange
 from category import get_category
 from backupdb import backup_db
+from restore_db import restore_db
 from graph import build_graph, build_graph_hor
 from keys import telegram_token, is_admin
 import sys
@@ -1608,7 +1609,7 @@ async def menu_admin(message: types.Message):
             [InlineKeyboardButton(text="Download Statistic", callback_data="user_stat")],
             [InlineKeyboardButton(text="Download log", callback_data="log")],
             [InlineKeyboardButton(text="Download Backup", callback_data="backup")],
-            # [InlineKeyboardButton(text="*Upload and Restore DB", callback_data="push_db")],
+            [InlineKeyboardButton(text="*Upload and Restore DB", callback_data="push_db")],
             [InlineKeyboardButton(text="Задонатить на развитие", callback_data="donate")],
         ]
     )
@@ -1692,12 +1693,83 @@ async def process_backup(callback_query: types.CallbackQuery):
     await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(last_downloaded_file))
     await bot.answer_callback_query(callback_query.id)
 
+
+
+
+
+
+
 # # ADMIN --- push_db
 # @dp.callback_query(lambda c: c.data == 'push_db')
 # async def process_push_db(callback_query: types.CallbackQuery):
 #     await bot.send_message(callback_query.from_user.id, "push_db")
 #     await bot.answer_callback_query(callback_query.id)
 
+
+#
+# Admin Restore DB
+#
+# Нажимаю кнопку восстановления, прикрепляю свой файл db бинарный в .sql, он загружается в папку download_db.
+# Далее скрипт останавливает все запросы и очищает память, выставляется глобальный флаг, который не допускает  
+# пользователям взаимодействовать с базой. Тем временем, очищается полностью и даже разметка работающей базы 
+# и полностью переписывается с закаченного файла. Он не удаляется из папки, не думаю что их будет много.
+#
+ 
+class Restor_db(StatesGroup):
+    load_db = State()
+
+
+# Push button - restore
+@dp.callback_query(lambda c: c.data == 'push_db')
+async def process_sub_admin_stat_push(callback_query: types.CallbackQuery, state: FSMContext):
+    await callback_query.message.answer(text="Прикрепи и отправь нужную копию базы данных для восстановления.", reply_markup=ReplyKeyboardRemove())
+    await state.set_state(Restor_db.load_db) # Next Step
+    await bot.answer_callback_query(callback_query.id) # End typing
+
+# Next step - download db and restore
+@dp.message(Restor_db.load_db)
+async def load_a_base(message: Message, state: FSMContext):
+    # global work_in_progress
+    # work_in_progress = True # Блокировка обращений к базе данных всех пользователей
+
+    if not isinstance(message.document, types.Document):
+        await message.answer("Вы передали не документ.")
+        return
+
+    file_extension = message.document.file_name.split('.')[-1]
+    allowed_extensions = ['sql']
+
+    if file_extension not in allowed_extensions:
+        await message.answer("Вы передали файл не sql расширения.")
+        return    
+
+
+    # Name file
+    date_time = await day_utcnow() # Current date and time
+    date = await unformat_date(date_time)
+    formtime = str(date[0]) + str(date[1])
+    file_name = f"uploaded-db-{formtime}.sql"
+
+    # await asyncio.sleep(0.3)
+
+    file_path = f"./download_db/{file_name}"
+    await bot.download(message.document, file_path) # То что прикрепили и отправили, скачивается в папку с новым именем
+
+    await bot.session.close()
+    await dp.storage.close()
+
+    confirmation = await restore_db(file_path) # Восстановелние базы
+
+    work_in_progress = False # Восстановление возможности обращения пользователей к базе
+
+    if confirmation == True:
+        await message.answer("Восстановление базы данных прошло успешно.")
+    else:
+        await message.answer("При восстановлении базы данных, что то пошло не так.")
+
+
+    await state.clear()
+    #await state.set_state(Restor_db.restor_db) # Переход к следующему шагу
 
 
 
