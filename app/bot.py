@@ -1,14 +1,14 @@
 import logging
 # При деплое раскоментить
-# logging.getLogger('aiogram').propagate = False # Блокировка логирование aiogram до его импорта
-# logging.basicConfig(level=logging.INFO, filename='log/app.log', filemode='a', format='%(levelname)s - %(asctime)s - %(name)s - %(message)s',) # При деплое активировать логирование в файл
+logging.getLogger('aiogram').propagate = False # Блокировка логирование aiogram до его импорта
+logging.basicConfig(level=logging.INFO, filename='log/app.log', filemode='a', format='%(levelname)s - %(asctime)s - %(name)s - %(message)s',) # При деплое активировать логирование в файл
 from worker_db import get_user_by_id, adding_user, adding_session, update_user, get_all_users_admin, get_session_by_month, get_session_stat_year
-from functions import is_int_or_float, day_utcnow, re_day, re_month, sum_cat, sum_add_cat, re_year
+from functions import is_int_or_float, day_utcnow, re_day, re_month, sum_cat, re_year
 from exchange import get_exchange
 from category import get_category
 from backupdb import backup_db
 from graph import build_graph, build_graph_hor
-from keys import telegram, is_admin
+from keys import telegram_token, is_admin
 import sys
 import os
 import csv
@@ -31,13 +31,12 @@ from aiogram.client.default import DefaultBotProperties
 # from WalletPay.types import Event
 # import uuid
 from aiogram.utils.chat_action import ChatActionMiddleware
-
-
+from aiogram.utils.markdown import hbold
 
 
 dp = Dispatcher() # All handlers should be attached to the Router (or Dispatcher)
 #bot = Bot(telegram) #, default=types.DefaultBotProperties(parse_mode="Markdown")) # Initialize Bot instance with a default parse mode which will be passed to all API calls
-bot = Bot(token=telegram, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(telegram_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 # router = Router()
 # router.message.middleware(ChatActionMiddleware())
                                                                                                 
@@ -53,7 +52,6 @@ async def typing(action) -> None:
 
 
 
-
 # PUSH /START
 @dp.message(CommandStart())
 async def command_start_handler(message: types.Message) -> None:
@@ -63,12 +61,16 @@ async def command_start_handler(message: types.Message) -> None:
     👛 Это бот, который помогает вести статистику доходов и расходов из разных источников. Позволяет\
     дотошно анализировать категории расходов и доходов, предоставляя удобный отчет.\n\
     Для какой то части людей - это очень полезно, например для меня.\n\n\
-    🗑 При желании, вы можете удалить все данные о транзакциях в базе, нажатием одной кнопки. Подробнее - позже.\n\n\n\
-EN\nHi, {html.bold(message.from_user.full_name)}!\n\n\
-    👛 This is a bot that helps to keep statistics on income and expenses from various sources. Allows\
-    meticulously analyze the categories of expenses and income, providing a convenient report.\n\
-    For some part of people, it is very useful, for example, for me.\n\n\
-    🗑 If desired, you can delete all transaction data in the database by pressing one button. More details later.")
+    Бот позволяет вызвать меню набрав текстом:\n\
+    - Наберите текст содержащий 'баланс' для вывода баланса,\n\
+    - По аналогии можно набрать: статистика, добавить, убрать, переместить, настройки, графики или фразы содержащие части этих слов.")
+
+# 🗑 При желании, вы можете удалить все данные о транзакциях в базе, нажатием одной кнопки. Подробнее - позже.               
+# EN\nHi, {html.bold(message.from_user.full_name)}!\n\n\
+#     👛 This is a bot that helps to keep statistics on income and expenses from various sources. Allows\
+#     meticulously analyze the categories of expenses and income, providing a convenient report.\n\
+#     For some part of people, it is very useful, for example, for me.\n\n\
+#     🗑 If desired, you can delete all transaction data in the database by pressing one button. More details later.")
         # Preparing user data
     id = user_id(message)
     name = message.from_user.username
@@ -1158,8 +1160,8 @@ async def menu_stat(message: types.Message):
             [InlineKeyboardButton(text="📊 Категории расходов за тек. месяц", callback_data="stat_cat_month")],
             [InlineKeyboardButton(text="📊 Категории доходов за тек. месяц", callback_data="stat_add_cat_month")],
             [InlineKeyboardButton(text="📊 Фин. статистика за тек. год", callback_data="stat_year")],
-            [InlineKeyboardButton(text="📊 Категории расходов за тек. год", callback_data="stat_add_year")],
-            [InlineKeyboardButton(text="📊 Категории доходов за тек. год", callback_data="stat_del_year")],
+            [InlineKeyboardButton(text="📊 Категории доход за тек. год", callback_data="stat_add_year")],
+            [InlineKeyboardButton(text="📊 Категории расход за тек. год", callback_data="stat_del_year")],
         ]
     )
     await message.answer("📊 Выберите вариант статистики:", reply_markup=keyboard)
@@ -1188,7 +1190,14 @@ async def process_stat_month(callback_query: types.CallbackQuery):
     for n in data:
         i += 1
         day = int(await re_day(n.date))  # Преобразование даты в int
-        amount = float(n.amount)
+            # USDT 
+        if i == 1:
+            one_usdt = await get_exchange()
+        if n.is_crypto is True:
+            amount = float(n.amount) * one_usdt
+        else:
+            amount = float(n.amount)
+
         if n.flow == '-':  # n.flow может быть '+' или '-'
             amount = -amount
             expenses = expenses + amount
@@ -1257,10 +1266,11 @@ async def process_stat_cat_month(callback_query: types.CallbackQuery):
         return
 
     # Получаем траты по категориям, если они не ноль
-    data = await sum_cat(data)
-    x = data[0]
-    y = data[1]
-    name_month = data[2]
+    flow = "-"
+    data_q = await sum_cat(flow, data)
+    x = data_q[0]
+    y = data_q[1]
+    name_month = data_q[2]
     name_file = f"graph_{id}_hor.png"
     add_or_del = "расходов"
 
@@ -1307,11 +1317,12 @@ async def process_stat_add_cat_month(callback_query: types.CallbackQuery):
         await bot.answer_callback_query(callback_query.id)
         return
 
-    # Получаем траты по категориям, если они не ноль
-    data = await sum_add_cat(data)
-    x = data[0]
-    y = data[1]
-    name_month = data[2]
+    # Получаем доходы по категориям, если они не ноль
+    flow = "+"
+    data_q = await sum_cat(flow, data)
+    x = data_q[0]
+    y = data_q[1]
+    name_month = data_q[2]
     name_file = f"graph_{id}_add_hor.png"
     add_or_del = "доходов"
 
@@ -1368,8 +1379,14 @@ async def process_stat_year(callback_query: types.CallbackQuery):
         i += 1
             # Получение месяца из числа в название из даных базы
         name_month = await re_month(n.date)
-        #id_month = 
-        amount = float(n.amount)
+            # USDT
+        if i == 1:
+            one_usdt = await get_exchange()
+        if n.is_crypto is True:
+            amount = float(n.amount) * one_usdt
+        else:
+            amount = float(n.amount)
+
         if n.flow == '-':  # n.flow может быть '+' или '-'
             amount = -amount
             expenses = expenses + amount
@@ -1425,33 +1442,106 @@ async def process_stat_year(callback_query: types.CallbackQuery):
 
 
 
+# Статистика категорий доходов за год текущий по id пользователя
+@dp.callback_query(lambda c: c.data == 'stat_add_year')
+async def process_stat_add_year(callback_query: types.CallbackQuery):
+    await bot.send_chat_action(callback_query.from_user.id, action='typing')
 
+    id = callback_query.from_user.id
+    data = await get_session_stat_year(id)
 
+    if data is None:
+        await bot.send_message(callback_query.from_user.id, "К сожалению, в этом году нет транзакций.")
+        await bot.answer_callback_query(callback_query.id)
+        return
 
+    # Получаем доходы по категориям, если они не ноль
+    flow = "+"
+    data_q = await sum_cat(flow, data)
+    x = data_q[0]
+    y = data_q[1]
+    name_year = data_q[3]
+    name_file = f"graph_{id}_add_hor_year.png"
+    add_or_del = "доходов"
 
+    confirm = await build_graph_hor(x, y, add_or_del, name_year, name_file) # Построение графика
 
+    if confirm is True and os.path.exists(f"./graph/{name_file}") and os.path.getsize(f"./graph/{name_file}") > 0:
+        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/{name_file}"))
 
+        # После передачи графика, тут же удаляю его на сервере
+    directory_path = "./graph/"
+    file_name_to_delete = name_file
 
+        # Поиск файла в папке
+    for filename in os.listdir(directory_path):
+        if filename == file_name_to_delete:
+                # Путь к файлу, который нужно удалить
+            file_path = os.path.join(directory_path, filename)
+                # Удаление файла
+            os.remove(file_path)
+            print(f"INFO: Файл {file_path} был удален на сервере.")
+            break  # Прерываем цикл после удаления файла
+    else:
+        print(f"ERROR: Файл {file_name_to_delete} не найден в папке {directory_path}")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# STAT --- year
-@dp.callback_query(lambda c: c.data == 'stat_year')
-async def process_stat_year(callback_query: types.CallbackQuery):
-    await bot.send_message(callback_query.from_user.id, "Статистика за год")
+    #await bot.send_message(callback_query.from_user.id, f"Статистика за {name_month}:\n\nОбщий доход: {round(income, 2)}\nОбщий расход: {round(expenses, 2)}\nОстаток: {round(income - (expenses * -1), 2)}")
+    
     await bot.answer_callback_query(callback_query.id)
+    await callback_query.answer() # Подтверждение получения
+
+
+
+
+
+
+# Статистика категорий расходов за год текущий по id пользователя
+@dp.callback_query(lambda c: c.data == 'stat_del_year')
+async def process_stat_del_year(callback_query: types.CallbackQuery):
+    await bot.send_chat_action(callback_query.from_user.id, action='typing')
+
+    id = callback_query.from_user.id
+    data = await get_session_stat_year(id)
+
+    if data is None:
+        await bot.send_message(callback_query.from_user.id, "К сожалению, в этом году нет транзакций.")
+        await bot.answer_callback_query(callback_query.id)
+        return
+
+    # Получаем доходы по категориям, если они не ноль
+    flow = "-"
+    data_q = await sum_cat(flow, data)
+    x = data_q[0]
+    y = data_q[1]
+    name_year = data_q[3]
+    name_file = f"graph_{id}_del_hor_year.png"
+    add_or_del = "расходов"
+
+    confirm = await build_graph_hor(x, y, add_or_del, name_year, name_file) # Построение графика
+
+    if confirm is True and os.path.exists(f"./graph/{name_file}") and os.path.getsize(f"./graph/{name_file}") > 0:
+        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/{name_file}"))
+
+        # После передачи графика, тут же удаляю его на сервере
+    directory_path = "./graph/"
+    file_name_to_delete = name_file
+
+        # Поиск файла в папке
+    for filename in os.listdir(directory_path):
+        if filename == file_name_to_delete:
+                # Путь к файлу, который нужно удалить
+            file_path = os.path.join(directory_path, filename)
+                # Удаление файла
+            os.remove(file_path)
+            print(f"INFO: Файл {file_path} был удален на сервере.")
+            break  # Прерываем цикл после удаления файла
+    else:
+        print(f"ERROR: Файл {file_name_to_delete} не найден в папке {directory_path}")
+
+    #await bot.send_message(callback_query.from_user.id, f"Статистика за {name_month}:\n\nОбщий доход: {round(income, 2)}\nОбщий расход: {round(expenses, 2)}\nОстаток: {round(income - (expenses * -1), 2)}")
+    
+    await bot.answer_callback_query(callback_query.id)
+    await callback_query.answer() # Подтверждение получения
 
 
 
@@ -1639,7 +1729,11 @@ async def my_handler(message: Message):
                 [InlineKeyboardButton(text=f"🎫 Крипта ({round(crypto, 3)} {crypto_currency}) ", callback_data="add_crypto")], 
             ]
         )
-        await message.answer("⚖️ Баланс", reply_markup=keyboard)
+        await message.answer("⚖️ Баланс:", reply_markup=keyboard)
+            # USDT
+        one_usdt = await get_exchange()
+        usdt_crypto = crypto * one_usdt
+        await bot.send_message(message.from_user.id, f"Всего налом и на счетах: {round(usdt_crypto + cards + cash, 2)} {money_currency}")
 
     elif "статист" in message.text.lower() or "граф" in message.text.lower():
         await menu_stat(message)
@@ -1664,15 +1758,6 @@ async def my_handler(message: Message):
 
 
 
-# @router.message()
-# async def echo_handler(message: Message) -> None:
-#     try:
-#         # Send a copy of the received message
-#         await message.send_copy(chat_id=message.chat.id)
-#     except TypeError:
-#         # But not all the types is supported to be copied so need to handle it
-#         await message.answer("Nice try!")
-
 
 
 
@@ -1680,17 +1765,13 @@ async def my_handler(message: Message):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout) # При деплое закоментить
+    # logging.basicConfig(level=logging.INFO, stream=sys.stdout) # При деплое закоментить
     asyncio.run(dp.start_polling(bot, skip_updates=False)) # skip_updates=False обрабатывать каждое сообщение с серверов Telegram, важно для принятия платежей
 
 
 
 
 
-
-
-# Нулевое добавление
-# Введите цифру
 
 
 

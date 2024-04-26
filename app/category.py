@@ -15,7 +15,7 @@ async def get_category(in_text_category):
         text_vec = vectorizer.transform([text])
         return model.predict(text_vec)[0]
 
-    intent = get_intent(in_text_category)
+    intent = get_intent(in_text_category.lower()) # Все введенное в боте будет маленькими буквами
     return intent
 
 

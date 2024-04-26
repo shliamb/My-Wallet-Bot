@@ -3,7 +3,7 @@ version: '3.8'
 services:
 
   postgres:
-    image: postgres:14 # latest
+    image: postgres:16.1 #latest # 14
     container_name: app_postgres
     environment:
       POSTGRES_USER: ${USER_DB}
@@ -16,11 +16,23 @@ services:
     networks:
       - db-network
 
+  app:
+    build: .
+    container_name: bot
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${USER_DB}
+      POSTGRES_PASSWORD: ${PASWOR_DB}
+      POSTGRES_DB: my_database
+    depends_on:
+      - postgres
+    networks:
+      - db-network
+
+
 volumes:
   postgres_data:
 
 networks:
   db-network:
     driver: bridge
-
-
