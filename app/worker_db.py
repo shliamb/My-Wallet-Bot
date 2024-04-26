@@ -127,7 +127,7 @@ async def get_all_session_at_id(id):
 # All sessions of one user per month/period
 
 
-# Получить все сессии по ID пользователя за текущий месяц и год
+# Получить все сессии по ID пользователя за текущий месяц
 async def get_session_by_month(id):
     async_session = await create_async_engine_and_session()
     async with async_session() as session:
@@ -145,8 +145,8 @@ async def get_session_by_month(id):
         .filter(Sessions.amount != 0) # Не нулевые транзакции
         .filter(Sessions.category != "moving") # Не перемещения
         .filter(
-            extract('month', Sessions.date) == month,
-            extract('year', Sessions.date) == year
+            extract('month', Sessions.date) == month, # Текущий месяц
+            extract('year', Sessions.date) == year # Текущий год
         )
         )
         result = await session.execute(query)
@@ -154,6 +154,28 @@ async def get_session_by_month(id):
         return data or None
 
 
+
+# Получить все сессии по ID пользователя за текущий год
+async def get_session_stat_year(id):
+    async_session = await create_async_engine_and_session()
+    async with async_session() as session:
+
+        time_correction = +3 # Moscow
+        utc_zone = timezone.utc
+        a = datetime.now(timezone.utc).replace(tzinfo=utc_zone)
+        a = a + timedelta(hours=time_correction)
+        year = int(a.strftime("%Y"))
+
+        query = (
+        select(Sessions)
+        .filter(Sessions.users_id == id) 
+        .filter(Sessions.amount != 0) # Не нулевые транзакции
+        .filter(Sessions.category != "moving") # Не перемещения
+        .filter(extract('year', Sessions.date) == year) # Текущий год
+        )
+        result = await session.execute(query)
+        data = result.scalars().all()
+        return data or None
 
 
 

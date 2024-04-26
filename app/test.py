@@ -1,4 +1,4 @@
-from worker_db import get_all_session, get_all_session_at_id, get_user_by_id, get_all_users_admin, get_session_by_month
+from worker_db import get_all_session, get_all_session_at_id, get_user_by_id, get_all_users_admin, get_session_by_month, get_session_stat_year
 import asyncio
 
 
@@ -144,7 +144,7 @@ async def ddf():
 
     id = 1666495
 
-    data = await get_session_by_month(id)
+    data = await get_session_stat_year(id)
     if data:
         for n in data:
             print(n.id)

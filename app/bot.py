@@ -2,8 +2,8 @@ import logging
 # При деплое раскоментить
 # logging.getLogger('aiogram').propagate = False # Блокировка логирование aiogram до его импорта
 # logging.basicConfig(level=logging.INFO, filename='log/app.log', filemode='a', format='%(levelname)s - %(asctime)s - %(name)s - %(message)s',) # При деплое активировать логирование в файл
-from worker_db import get_user_by_id, adding_user, adding_session, update_user, get_all_users_admin, get_session_by_month
-from functions import is_int_or_float, day_utcnow, re_day, re_month
+from worker_db import get_user_by_id, adding_user, adding_session, update_user, get_all_users_admin, get_session_by_month, get_session_stat_year
+from functions import is_int_or_float, day_utcnow, re_day, re_month, sum_cat, sum_add_cat, re_year
 from exchange import get_exchange
 from category import get_category
 from backupdb import backup_db
@@ -1156,14 +1156,10 @@ async def menu_stat(message: types.Message):
         inline_keyboard=[
             [InlineKeyboardButton(text="📊 Фин. статистика за тек. месяц", callback_data="stat_month")],
             [InlineKeyboardButton(text="📊 Категории расходов за тек. месяц", callback_data="stat_cat_month")],
-            [InlineKeyboardButton(text="📊 Статистика за год", callback_data="stat_year")],
-            # [InlineKeyboardButton(text="📊 ", callback_data="add_crypto")],
-            # За неделю
-            # Месяц
-            # По месяцам года
-            # По годам
-
-
+            [InlineKeyboardButton(text="📊 Категории доходов за тек. месяц", callback_data="stat_add_cat_month")],
+            [InlineKeyboardButton(text="📊 Фин. статистика за тек. год", callback_data="stat_year")],
+            [InlineKeyboardButton(text="📊 Категории расходов за тек. год", callback_data="stat_add_year")],
+            [InlineKeyboardButton(text="📊 Категории доходов за тек. год", callback_data="stat_del_year")],
         ]
     )
     await message.answer("📊 Выберите вариант статистики:", reply_markup=keyboard)
@@ -1216,14 +1212,15 @@ async def process_stat_month(callback_query: types.CallbackQuery):
             x.append(day)
             y.append(round(null_amount, 2))
 
-    confirm = await build_graph(id, x, y, name_month) # Построение графика
+    name_file = f"graph_{id}.png"
+    confirm = await build_graph(id, x, y, name_month, name_file) # Построение графика
 
-    if confirm is True and os.path.exists(f"./graph/graph_{id}.png") and os.path.getsize(f"./graph/graph_{id}.png") > 0:
-        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/graph_{id}.png"))
+    if confirm is True and os.path.exists(f"./graph/{name_file}") and os.path.getsize(f"./graph/{name_file}") > 0:
+        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/{name_file}"))
 
         # После передачи графика, тут же удаляю его на сервере
     directory_path = "./graph/"
-    file_name_to_delete = f"graph_{id}.png"
+    file_name_to_delete = name_file
 
         # Поиск файла в папке
     for filename in os.listdir(directory_path):
@@ -1259,158 +1256,22 @@ async def process_stat_cat_month(callback_query: types.CallbackQuery):
         await bot.answer_callback_query(callback_query.id)
         return
 
+    # Получаем траты по категориям, если они не ноль
+    data = await sum_cat(data)
+    x = data[0]
+    y = data[1]
+    name_month = data[2]
+    name_file = f"graph_{id}_hor.png"
+    add_or_del = "расходов"
 
-    x = []
-    y = []
+    confirm = await build_graph_hor(x, y, add_or_del, name_month, name_file) # Построение графика
 
-    are = "Жильё (аренда, ипотека)"
-    com = "Коммунальные услуги (электричество, вода, газ)"
-    prod = "Продукты питания"
-    tra = "Транспорт (автомобиль, общественный транспорт)"
-    zdor = "Здравоохранение (медицинские услуги, лекарства)"
-    shc = "Образование (школа, университет)"
-    rest = "Отдых и развлечения"
-    shuz =  "Одежда и аксессуары"
-    inet = "Связь и интернет"
-    subs = "Платные подписки"
-    lich = "Личная гигиена и уход"
-    hel = "Подарки и благотворительность"
-    inv = "Сбережения и инвестиции"
-    cred = "Налоги и кредиты"
-    alim = "Алименты"
-    chil = "Покупки детям"
-    cruj = "Дополнительные занятия дети"
-    site = "Хостинг, сайт, домены"
-    zap = "Запчасти"
-    wom = "Услуги противоположного пола"
-    canc = "Канцелярия"
-
-    m_canc = m_wom = m_zap = m_site = m_cruj = m_chil = m_alim = m_cred = m_inv = m_hel = m_lich = m_subs = m_shuz = m_rest = m_shc = m_zdor = m_tra = m_com = m_are = m_inet = m_prod = 0
-    i = 0
-
-    for n in data:
-        if i == 0:
-            # Получение месяца 
-            name_month = await re_month(n.date)
-
-        if n.flow == '-':
-            if n.ml_category == prod:
-                m_prod = m_prod + n.amount
-            if n.ml_category == inet:
-                m_inet = m_inet + n.amount
-            if n.ml_category == are:
-                m_are = m_are + n.amount
-            if n.ml_category == com:
-                m_com = m_com + n.amount
-            if n.ml_category == tra:
-                m_tra = m_tra + n.amount
-            if n.ml_category == zdor:
-                m_zdor = m_zdor + n.amount
-            if n.ml_category == shc:
-                m_shc = m_shc + n.amount
-            if n.ml_category == rest:
-                m_rest = m_rest + n.amount
-            if n.ml_category == shuz:
-                m_shuz = m_shuz + n.amount
-            if n.ml_category == subs:
-                m_subs = m_subs + n.amount
-            if n.ml_category == lich:
-                m_lich = m_lich + n.amount
-            if n.ml_category == hel:
-                m_hel = m_hel + n.amount
-            if n.ml_category == inv:
-                m_inv = m_inv + n.amount
-            if n.ml_category == cred:
-                m_cred = m_cred + n.amount
-            if n.ml_category == alim:
-                m_alim = m_alim + n.amount
-            if n.ml_category == chil:
-                m_chil = m_chil + n.amount
-            if n.ml_category == cruj:
-                m_cruj = m_cruj + n.amount
-            if n.ml_category == site:
-                m_site = m_site + n.amount
-            if n.ml_category == zap:
-                m_zap = m_zap + n.amount
-            if n.ml_category == wom:
-                m_wom = m_wom + n.amount
-            if n.ml_category == canc:
-                m_canc = m_canc + n.amount
-        i += 1
-
-    if m_canc != 0:
-        x.append(canc)
-        y.append(m_canc)
-    if m_wom != 0:
-        x.append(wom)
-        y.append(m_wom)
-    if m_zap != 0:
-        x.append(zap)
-        y.append(m_zap)
-    if m_site != 0:
-        x.append(site)
-        y.append(m_site)
-    if m_cruj != 0:
-        x.append(cruj)
-        y.append(m_cruj)
-    if m_chil != 0:
-        x.append(chil)
-        y.append(m_chil)
-    if m_alim != 0:
-        x.append(alim)
-        y.append(m_alim)
-    if m_cred != 0:
-        x.append(cred)
-        y.append(m_cred)
-    if m_inv != 0:
-        x.append(inv)
-        y.append(m_inv)
-    if m_hel != 0:
-        x.append(hel)
-        y.append(m_hel)
-    if m_lich != 0:
-        x.append(lich)
-        y.append(m_lich)
-    if m_subs != 0:
-        x.append(subs)
-        y.append(m_subs)
-    if m_shuz != 0:
-        x.append(shuz)
-        y.append(m_shuz)
-    if m_rest != 0:
-        x.append(rest)
-        y.append(m_rest)
-    if m_shc != 0:
-        x.append(shc)
-        y.append(m_shc)
-    if m_zdor != 0:
-        x.append(zdor)
-        y.append(m_zdor)
-    if m_tra != 0:
-        x.append(tra)
-        y.append(m_tra)
-    if m_com != 0:
-        x.append(com)
-        y.append(m_com)
-    if m_prod != 0:
-        x.append(prod)
-        y.append(m_prod)
-    if m_inet != 0:
-        x.append(inet)
-        y.append(m_inet)
-    if m_are != 0:
-        x.append(are)
-        y.append(m_are)
-
-
-    confirm = await build_graph_hor(id, x, y, name_month) # Построение графика
-
-    if confirm is True and os.path.exists(f"./graph/graph_{id}_hor.png") and os.path.getsize(f"./graph/graph_{id}_hor.png") > 0:
-        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/graph_{id}_hor.png"))
+    if confirm is True and os.path.exists(f"./graph/{name_file}") and os.path.getsize(f"./graph/{name_file}") > 0:
+        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/{name_file}"))
 
         # После передачи графика, тут же удаляю его на сервере
     directory_path = "./graph/"
-    file_name_to_delete = f"graph_{id}_hor.png"
+    file_name_to_delete = name_file
 
         # Поиск файла в папке
     for filename in os.listdir(directory_path):
@@ -1428,6 +1289,154 @@ async def process_stat_cat_month(callback_query: types.CallbackQuery):
     
     await bot.answer_callback_query(callback_query.id)
     await callback_query.answer() # Подтверждение получения
+
+
+
+
+
+# Статистика категорий доходов за месяц текущий по id пользователя
+@dp.callback_query(lambda c: c.data == 'stat_add_cat_month')
+async def process_stat_add_cat_month(callback_query: types.CallbackQuery):
+    await bot.send_chat_action(callback_query.from_user.id, action='typing')
+
+    id = callback_query.from_user.id
+    data = await get_session_by_month(id)
+
+    if data is None:
+        await bot.send_message(callback_query.from_user.id, "К сожалению, в этом месяце нет транзакций.")
+        await bot.answer_callback_query(callback_query.id)
+        return
+
+    # Получаем траты по категориям, если они не ноль
+    data = await sum_add_cat(data)
+    x = data[0]
+    y = data[1]
+    name_month = data[2]
+    name_file = f"graph_{id}_add_hor.png"
+    add_or_del = "доходов"
+
+    confirm = await build_graph_hor(x, y, add_or_del, name_month, name_file) # Построение графика
+
+    if confirm is True and os.path.exists(f"./graph/{name_file}") and os.path.getsize(f"./graph/{name_file}") > 0:
+        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/{name_file}"))
+
+        # После передачи графика, тут же удаляю его на сервере
+    directory_path = "./graph/"
+    file_name_to_delete = name_file
+
+        # Поиск файла в папке
+    for filename in os.listdir(directory_path):
+        if filename == file_name_to_delete:
+                # Путь к файлу, который нужно удалить
+            file_path = os.path.join(directory_path, filename)
+                # Удаление файла
+            os.remove(file_path)
+            print(f"INFO: Файл {file_path} был удален на сервере.")
+            break  # Прерываем цикл после удаления файла
+    else:
+        print(f"ERROR: Файл {file_name_to_delete} не найден в папке {directory_path}")
+
+    #await bot.send_message(callback_query.from_user.id, f"Статистика за {name_month}:\n\nОбщий доход: {round(income, 2)}\nОбщий расход: {round(expenses, 2)}\nОстаток: {round(income - (expenses * -1), 2)}")
+    
+    await bot.answer_callback_query(callback_query.id)
+    await callback_query.answer() # Подтверждение получения
+
+
+
+
+
+# Фин. Статистика по id пользователя по месяцам текущего года доход - расход
+@dp.callback_query(lambda c: c.data == 'stat_year')
+async def process_stat_year(callback_query: types.CallbackQuery):
+    await bot.send_chat_action(callback_query.from_user.id, action='typing')
+
+    id = callback_query.from_user.id
+        # Получение данных из базы
+    data = await get_session_stat_year(id)
+
+    if data is None:
+        await bot.send_message(callback_query.from_user.id, "К сожалению, в этом году нет транзакций.")
+        await bot.answer_callback_query(callback_query.id)
+        return
+        # Собираю доходы - расходы одного месяца и вывожу в обной вертикальной колонке результат, в результате график текущего года
+    x = []
+    y = []
+    income = expenses = amount = null_amount = i = 0
+    null_month = ""
+
+    for n in data:
+        i += 1
+            # Получение месяца из числа в название из даных базы
+        name_month = await re_month(n.date)
+        #id_month = 
+        amount = float(n.amount)
+        if n.flow == '-':  # n.flow может быть '+' или '-'
+            amount = -amount
+            expenses = expenses + amount
+        elif n.flow == '+':
+            income = income + amount
+
+        if null_month == "":
+            null_month = name_month
+            year = await re_year(n.date) # Получаем год
+
+        if name_month == null_month:
+            null_amount += amount
+        else:
+            x.append(null_month)
+            y.append(round(null_amount, 2))
+            null_month = name_month
+            null_amount = amount
+
+        if i == len(data):
+            x.append(name_month)
+            y.append(round(null_amount, 2))
+
+    name_file = f"graph_{id}_stat_year.png"
+    confirm = await build_graph(id, x, y, year, name_file) # Построение графика
+
+    if confirm is True and os.path.exists(f"./graph/{name_file}") and os.path.getsize(f"./graph/{name_file}") > 0:
+        await bot.send_document(chat_id=callback_query.from_user.id, document=types.input_file.FSInputFile(f"./graph/{name_file}"))
+
+        # После передачи графика, тут же удаляю его на сервере
+    directory_path = "./graph/"
+    file_name_to_delete = name_file
+
+        # Поиск файла в папке
+    for filename in os.listdir(directory_path):
+        if filename == file_name_to_delete:
+                # Путь к файлу, который нужно удалить
+            file_path = os.path.join(directory_path, filename)
+                # Удаление файла
+            os.remove(file_path)
+            print(f"INFO: Файл {file_path} был удален на сервере.")
+            break  # Прерываем цикл после удаления файла
+    else:
+        print(f"ERROR: Файл {file_name_to_delete} не найден в папке {directory_path}")
+
+    await bot.send_message(callback_query.from_user.id, f"Статистика за {year}:\n\nОбщий доход за год: {round(income, 2)}\nОбщий расход за год: {round(expenses, 2)}\nОстаток: {round(income - (expenses * -1), 2)}")
+    
+    await bot.answer_callback_query(callback_query.id)
+    await callback_query.answer() # Подтверждение получения
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

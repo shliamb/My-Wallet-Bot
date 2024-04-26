@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt # Графики
 import asyncio
 
 
-async def build_graph(id, x, y, name_month):
+async def build_graph(id, x, y, name_month, name_file):
     fig, ax = plt.subplots(figsize=(20, 10), dpi=100) # Создание объектов фигуры и осей
     bars = ax.bar(x, y, color='lightblue')  # Создание столбчатой диаграммы
 
@@ -28,11 +28,11 @@ async def build_graph(id, x, y, name_month):
             va='bottom'  # Вертикальное выравнивание
         )
     plt.xticks(x)
-    plt.title('Общая статистика доход - расход по дням текущего месяца')
+    plt.title(f'Общая статистика доход - расход, {name_month}')
     plt.xlabel(name_month)
     plt.ylabel('Суммы')
     plt.grid(axis='y')  # Включение сетки по оси Y
-    plt.savefig(f'./graph/graph_{id}.png')
+    plt.savefig(f'./graph/{name_file}')
     plt.close()
     return True
 
@@ -44,13 +44,13 @@ async def build_graph(id, x, y, name_month):
 
 
 
-async def build_graph_hor(id, x, y, name_month):
+async def build_graph_hor(x, y, add_or_del , name_month, name_file):
 
     plt.figure(figsize=(20, 10), dpi=100, facecolor='w', edgecolor='k', frameon=True) # num='MyFigure', 
     bars = plt.barh(x, y, color='lightblue')  # Создание горизонтальной столбчатой диаграммы
-    plt.title(f'Категории расходов, {name_month}')
+    plt.title(f'Категории {add_or_del}, {name_month}')
     plt.xlabel('Суммы в руб.')
-    plt.ylabel('Категории расходов')
+    plt.ylabel(f'Категории {add_or_del}')
     plt.grid(axis='x')  # Включение сетки по оси X
 
     # Добавление текста к каждой полосе
@@ -62,7 +62,7 @@ async def build_graph_hor(id, x, y, name_month):
             va='center'            # Вертикальное выравнивание по центру
         )
 
-    plt.savefig(f'./graph/graph_{id}_hor.png')
+    plt.savefig(f'./graph/{name_file}')
     plt.close()
     return True
 
