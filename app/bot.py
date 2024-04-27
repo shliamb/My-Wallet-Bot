@@ -442,7 +442,7 @@ async def invoice_del_cash(message: Message, state: FSMContext):
     if amount is None:
         await message.answer("Ошибка: Введите сумму цифрами")
         return
-    await message.answer("Введите комментарий к пополнению:")
+    await message.answer("Введите комментарий к расходу:")
         # Сохраняем  данные в state
     await state.update_data(amount=amount)
     await state.set_state(Form.del_cash_text)
@@ -515,7 +515,7 @@ async def invoice_del_cards(message: Message, state: FSMContext):
     if amount is None:
         await message.answer("Ошибка: Введите сумму цифрами")
         return
-    await message.answer("Введите комментарий к пополнению:")
+    await message.answer("Введите комментарий к расходу:")
         # Сохраняем  данные в state
     await state.update_data(amount=amount)
     await state.set_state(Form.del_cards_text)
@@ -590,7 +590,7 @@ async def invoice_del_crypto(message: Message, state: FSMContext):
     if amount is None:
         await message.answer("Ошибка: Введите сумму цифрами")
         return
-    await message.answer("Введите комментарий к пополнению:")
+    await message.answer("Введите комментарий к расходу:")
         # Сохраняем  данные в state
     await state.update_data(amount=amount)
     await state.set_state(Form.del_crypto_text)
