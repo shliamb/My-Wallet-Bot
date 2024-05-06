@@ -121,7 +121,7 @@ async def sum_cat(flow, date_db):
     free = "Фриланс и подработки"
     bisnes = "Бизнес"
 
-    m_canc = m_wom = m_zap = m_site = m_cruj = m_chil = m_alim = m_cred = m_inv = m_hel = m_lich = m_subs = m_shuz = m_rest = m_shc = m_zdor = m_tra = m_com = m_are = m_inet = m_prod = m_stip = m_nasl = m_bisnes = m_free = m_vipl = m_comb = m_olds = m_rent  = m_invent = m_bonus = m_dolg = m_zp = m_are = 0
+    m_wom = m_zap = m_site = m_chil = m_alim = m_cred = m_inv = m_hel = m_lich = m_subs = m_shuz = m_rest = m_shc = m_zdor = m_tra = m_com = m_inet = m_prod = m_bisnes = m_free = m_olds = m_rent  = m_invent = m_bonus = m_dolg = m_zp = 0
     i = 0
 
 
@@ -136,7 +136,7 @@ async def sum_cat(flow, date_db):
         if n.is_crypto is True:
             amount = round(float(n.amount) * one_usdt, 2)
         else:
-            amount = float(n.amount)
+            amount = round(float(n.amount), 2)
 
         if n.flow == flow:
             if n.ml_category == prod:
