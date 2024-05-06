@@ -23,7 +23,7 @@ async def build_graph(id, x, y, name_month, name_file):
         ax.text(
             bar.get_x() + bar.get_width() / 2,  # X позиция надписи
             height,  # Y позиция надписи
-            f'{height}',  # Текст надписи
+            f'{height:.2f}',   # Текст надписи
             ha='center',  # Горизонтальное выравнивание
             va='bottom'  # Вертикальное выравнивание
         )

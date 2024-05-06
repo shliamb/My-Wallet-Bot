@@ -134,9 +134,9 @@ async def sum_cat(flow, date_db):
             one_usdt = await get_exchange()
         
         if n.is_crypto is True:
-            amount = round(float(n.amount) * one_usdt, 2)
+            amount = float(n.amount) * one_usdt
         else:
-            amount = round(float(n.amount), 2)
+            amount = float(n.amount)
 
         if n.flow == flow:
             if n.ml_category == prod:
@@ -195,82 +195,82 @@ async def sum_cat(flow, date_db):
 
     if m_wom != 0:
         x.append(wom)
-        y.append(m_wom)
+        y.append(round(m_wom, 2))
     if m_zap != 0:
         x.append(zap)
-        y.append(m_zap)
+        y.append(round(m_zap, 2))
     if m_site != 0:
         x.append(site)
-        y.append(m_site)
+        y.append(round(m_site, 2))
     if m_chil != 0:
         x.append(chil)
-        y.append(m_chil)
+        y.append(round(m_chil, 2))
     if m_alim != 0:
         x.append(alim)
-        y.append(m_alim)
+        y.append(round(m_alim, 2))
     if m_cred != 0:
         x.append(cred)
-        y.append(m_cred)
+        y.append(round(m_cred, 2))
     if m_inv != 0:
         x.append(inv)
-        y.append(m_inv)
+        y.append(round(m_inv, 2))
     if m_hel != 0:
         x.append(hel)
-        y.append(m_hel)
+        y.append(round(m_hel, 2))
     if m_lich != 0:
         x.append(lich)
-        y.append(m_lich)
+        y.append(round(m_lich, 2))
     if m_subs != 0:
         x.append(subs)
-        y.append(m_subs)
+        y.append(round(m_subs, 2))
     if m_shuz != 0:
         x.append(shuz)
-        y.append(m_shuz)
+        y.append(round(m_shuz, 2))
     if m_rest != 0:
         x.append(rest)
-        y.append(m_rest)
+        y.append(round(m_rest, 2))
     if m_shc != 0:
         x.append(shc)
-        y.append(m_shc)
+        y.append(round(m_shc, 2))
     if m_zdor != 0:
         x.append(zdor)
-        y.append(m_zdor)
+        y.append(round(m_zdor, 2))
     if m_tra != 0:
         x.append(tra)
-        y.append(m_tra)
+        y.append(round(m_tra, 2))
     if m_com != 0:
         x.append(com)
-        y.append(m_com)
+        y.append(round(m_com, 2))
     if m_prod != 0:
         x.append(prod)
-        y.append(m_prod)
+        y.append(round(m_prod, 2))
     if m_inet != 0:
         x.append(inet)
-        y.append(m_inet)
+        y.append(round(m_inet, 2))
     if m_bisnes != 0:
         x.append(bisnes)
-        y.append(m_bisnes)
+        y.append(round(m_bisnes, 2))
     if m_free != 0:
         x.append(free)
-        y.append(m_free)
+        y.append(round(m_free, 2))
     if m_olds != 0:
         x.append(olds)
-        y.append(m_olds)
+        y.append(round(m_olds, 2))
     if m_rent != 0:
         x.append(rent)
-        y.append(m_rent)
+        y.append(round(m_rent, 2))
     if m_zp != 0:
         x.append(zp)
-        y.append(m_zp)
+        y.append(round(m_zp, 2))
     if m_dolg != 0:
         x.append(dolg)
-        y.append(m_dolg)
+        y.append(round(m_dolg, 2))
     if m_bonus != 0:
         x.append(bonus)
-        y.append(m_bonus)
+        y.append(round(m_bonus, 2))
     if m_invent != 0:
         x.append(invent)
-        y.append(m_invent)
+        y.append(round(m_invent, 2))
 
     return x, y, name_month, name_year
 
