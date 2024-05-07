@@ -23,7 +23,7 @@ async def build_graph(id, x, y, name_month, name_file):
         ax.text(
             bar.get_x() + bar.get_width() / 2,  # X позиция надписи
             height,  # Y позиция надписи
-            f'{height:.2f}',   # Текст надписи
+            f'{round(height, 2)}',  # Текст надписи
             ha='center',  # Горизонтальное выравнивание
             va='bottom'  # Вертикальное выравнивание
         )
@@ -58,7 +58,7 @@ async def build_graph_hor(x, y, add_or_del , name_month, name_file):
         plt.text(
             bar.get_width(),       # X координата, начало полосы + её ширина
             bar.get_y() + bar.get_height() / 2,  # Y координата, центр полосы
-            f' {bar.get_width()}', # Текст, который будет отображаться (значение Y)
+            f' {round(bar.get_width(), 2)}', # Текст, который будет отображаться (значение Y)
             va='center'            # Вертикальное выравнивание по центру
         )
 
